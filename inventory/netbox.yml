@@ -1,0 +1,19 @@
+---
+
+plugin: netbox.netbox.nb_inventory
+validate_certs: false
+
+interfaces: true
+
+flatten_custom_fields: true
+flatten_config_context: true
+config_context: true
+group_names_raw: true
+group_by:
+  - cluster
+  - device_roles
+  - platforms
+  - tags
+
+query_filters:
+  - has_primary_ip: "true"
