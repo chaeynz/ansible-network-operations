@@ -29,5 +29,5 @@
             list: "H_{{ item.name }}"
       with_items: "{{ vcenter_vm_info }}"
       vars:
-        vcenter_vm_info: "{{ groups['testcluster'] | map('extract', hostvars, 'vm_info') | list }}"
+        vcenter_vm_info: "{{ groups['RESEARCH CLUSTER'] | map('extract', hostvars, 'vm_info') | list }}"
         
