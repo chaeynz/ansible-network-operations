@@ -13,6 +13,7 @@
     - name: Gather all registered virtual machines
       community.vmware.vmware_vm_info:
         <<: *credentials
+        show_tag: true
       register: vm_info
     - name:
       ansible.builtin.set_stats:
