@@ -1,5 +1,6 @@
 ---
 - name: Gather information from vCenter
+  hosts: vcenter
   vars:
     credentials: &credentials
       hostname: "{{ ansible_host }}"
