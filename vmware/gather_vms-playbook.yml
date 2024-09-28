@@ -1,17 +1,16 @@
 ---
 - name: Gather information from vCenter
-  hosts: vcenter
+  hosts: localhost
   gather_facts: false
   vars:
     credentials: &credentials
-      hostname: "{{ ansible_host }}"
-      username: "{{ ansible_user }}"
-      password: "{{ ansible_password }}"
+      hostname: "{{ VMWARE_HOST }}"
+      username: "{{ VMWARE_USER }}"
+      password: "{{ VMWARE_PASSWORD }}"
       validate_certs: false
 
   tasks:
     - name: Gather all registered virtual machines
       community.vmware.vmware_vm_info:
         <<: *credentials
-      delegate_to: localhost
       register: vm_info
