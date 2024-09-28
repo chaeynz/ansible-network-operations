@@ -14,4 +14,4 @@
         cluster: item.cluster
         tenant: item.tags.name
       state: present
-    with_items: vm_info.virtual_machines
+    with_items: ansible_stats.data.vm_info.virtual_machines
