@@ -1,6 +1,6 @@
 ---
-- name: Gather information from vCenter hosts
-  hosts: testcluster
+- name: Gather information from VMs
+  hosts: RESEARCH CLUSTER
   gather_facts: false
   tasks:
     - name: Gather primary IP and VM name
@@ -20,7 +20,7 @@
   hosts: router
   gather_facts: false
   tasks:
-    - name: Create address list for each vCenter host
+    - name: Create address list for each VM
       community.routeros.api_modify:
         <<: *credentials
         path: ip firewall address-list
