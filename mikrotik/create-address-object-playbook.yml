@@ -1,0 +1,20 @@
+---
+- name: Create address object
+  hosts: router
+  vars:
+    credentials: &credentials
+      hostname: "{{ ansible_host }}"
+      username: "{{ ansible_user }}"
+      password: "{{ ansible_password }}"
+      tls: true
+      validate_certs: false
+
+  gather_facts: false
+  tasks:
+    - name: Create address list
+      community.routeros.api_modify:
+        <<: *credentials
+        path: ip firewall address-list
+        data:
+          - address: "{{ primary_ip4 }}"
+            list: "H_{{ virtual_machine['name'] }}"
