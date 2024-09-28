@@ -1,5 +1,4 @@
 ---
-
 plugin: netbox.netbox.nb_inventory
 validate_certs: false
 
@@ -11,6 +10,7 @@ config_context: true
 group_names_raw: true
 group_by:
   - cluster
+  - cluster_group
   - device_roles
   - platforms
   - tags
