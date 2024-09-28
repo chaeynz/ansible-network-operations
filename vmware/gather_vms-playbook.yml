@@ -14,3 +14,4 @@
       community.vmware.vmware_vm_info:
         <<: *credentials
       register: vm_info
+      ansible.builtin.debug: vm_info
