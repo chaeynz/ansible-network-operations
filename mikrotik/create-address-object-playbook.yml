@@ -1,20 +1,28 @@
 ---
-- name: Create address object
-  hosts: router
-  vars:
-    credentials: &credentials
-      hostname: "{{ ansible_host }}"
-      username: "{{ ansible_user }}"
-      password: "{{ ansible_password }}"
-      tls: true
-      validate_certs: false
-
+- name: Gather information from VMs
+  hosts: "RESEARCH CLUSTER"
   gather_facts: false
   tasks:
-    - name: Create address list
+    - name: Gather primary IP and VM name
+      set_fact:
+        vms_info: "{{ hostvars[inventory_hostname]['primary_ipv4'] | default('') }}:{{ hostvars[inventory_hostname]['virtual_machine']['name'] | default('') }}"
+
+- name: Create address object on routers
+  hosts: router
+  gather_facts: false
+  tasks:
+    - name: Create address list for each VM
       community.routeros.api_modify:
-        <<: *credentials
         path: ip firewall address-list
         data:
-          - address: "{{ primary_ip4 }}"
-            list: "H_{{ virtual_machine['name'] }}"
+          - address: "{{ item.split(':')[0] }}"
+            list: "H_{{ item.split(':')[1] }}"
+      with_items: "{{ hostvars['vcenter_host'].vms_info }}"
+      vars:
+        credentials: &credentials
+          hostname: "{{ ansible_host }}"
+          username: "{{ ansible_user }}"
+          password: "{{ ansible_password }}"
+          tls: true
+          validate_certs: false
+      delegate_to: "{{ inventory_hostname }}"
