@@ -6,6 +6,10 @@
     - netbox_token: "{{ lookup('ansible.builtin.env', 'NETBOX_TOKEN') }}"
   hosts: localhost
   tasks:
+  - name: Print
+    ansible.builtin.debug:
+      var: vm_info
+
   - name: Loop print
     ansible.builtin.debug:
       msg: "{{ item.guest_name }}"
