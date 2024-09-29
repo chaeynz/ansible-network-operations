@@ -13,7 +13,7 @@
   - name: Loop print
     ansible.builtin.debug:
       msg: "{{ item.guest_name }}"
-    loop: vm_info.virtual_machines
+    loop: "{{ vm_info.virtual_machines }}"
 
   # - name: Create Virtual Machine object
   #   netbox.netbox.netbox_virtual_machine:
