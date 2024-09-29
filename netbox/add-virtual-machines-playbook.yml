@@ -8,7 +8,7 @@
   tasks:
   - name: Loop print
     ansible.builtin.debug:
-      msg: "{{ item.guest_name | regex_replace('\\..*', '') }}"
+      msg: "{{ item.guest_name }}"
     with_items: vm_info.virtual_machines
 
   # - name: Create Virtual Machine object
