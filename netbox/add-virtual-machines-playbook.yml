@@ -5,6 +5,7 @@
     credentials: &credentials
       netbox_url: "{{ lookup('ansible.builtin.env', 'NETBOX_API') }}"
       netbox_token: "{{ lookup('ansible.builtin.env', 'NETBOX_TOKEN') }}"
+      validate_certs: false
   hosts: localhost
   tasks:
     - name: Create Virtual Machine object
