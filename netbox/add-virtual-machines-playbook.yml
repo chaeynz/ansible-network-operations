@@ -6,21 +6,12 @@
     - netbox_token: "{{ lookup('ansible.builtin.env', 'NETBOX_TOKEN') }}"
   hosts: localhost
   tasks:
-  - name: Print
-    ansible.builtin.debug:
-      var: vm_info
-
-  - name: Loop print
-    ansible.builtin.debug:
-      msg: "{{ item.guest_name }}"
-    loop: "{{ vm_info.virtual_machines }}"
-
-  # - name: Create Virtual Machine object
-  #   netbox.netbox.netbox_virtual_machine:
-  #     <<: *credentials
-  #     data:
-  #       name: "{{ item.guest_name | regex_replace('\\..*', '') }}"
-  #       cluster: "{{ item.cluster }}"
-  #       tenant: "{{ item.tags.name }}"
-  #     state: present
-  #   with_items: vm_info.virtual_machines
+    - name: Create Virtual Machine object
+      netbox.netbox.netbox_virtual_machine:
+        <<: *credentials
+        data:
+          name: "{{ item.guest_name | regex_replace('\\..*', '') }}"
+          cluster: "{{ item.cluster }}"
+          tenant: "{{ item.tags.name }}"
+        state: present
+      loop: "{{ vm_info.virtual_machines }}"
