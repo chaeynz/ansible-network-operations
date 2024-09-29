@@ -14,6 +14,6 @@
         data:
           name: "{{ item.guest_name | regex_replace('\\..*', '') }}"
           cluster: "{{ item.cluster }}"
-          tenant: "{{ item.tags | selectattr('category_name', 'equalto', 'Tenant') | map(attribute='name') | list }}"
+          #tenant: "{{ item.tags | selectattr('category_name', 'equalto', 'Tenant') | map(attribute='name') | list }}"
         state: present
       loop: "{{ vm_info.virtual_machines }}"
