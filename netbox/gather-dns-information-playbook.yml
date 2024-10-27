@@ -18,8 +18,8 @@
         method: POST
         headers:
           Authorization: "Token {{ lookup('ansible.builtin.env', 'NETBOX_TOKEN') }}"
-        body:
-          query: "{ query {{ query | default('') }} }"
+        body: { query: "{{ query | default('') }}" }
+
         status_code: 200
         body_format: json
       register: response
@@ -28,3 +28,4 @@
       ansible.builtin.set_stats:
         data:
           dns_records: "{{ response }}"
+      # if response.data is defined | default([])
