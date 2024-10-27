@@ -14,7 +14,7 @@
           } }
 
       ansible.builtin.uri:
-        url: "{{ lookup('ansible.builtin.env', 'NETBOX_API') }}/graphql"
+        url: "{{ lookup('ansible.builtin.env', 'NETBOX_API') }}/graphql/"
         method: POST
         headers:
           Authorization: "Token {{ lookup('ansible.builtin.env', 'NETBOX_TOKEN') }}"
