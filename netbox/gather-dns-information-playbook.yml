@@ -24,9 +24,14 @@
         body_format: json
       register: response
 
+    - name: LOL
+      ansible.builtin.fail:
+        msg: "{{ response.json.errors[0].message }}"
+      when: response.json.errors is defined
+
+
     - name: Leave artifacts
       ansible.builtin.set_stats:
         data:
           dns_records: "{{ response.json.data.netbox_dns_record_list }}"
-      when: response.json.errors is defined
       # if response.data is defined | default([])
