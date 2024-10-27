@@ -2,6 +2,7 @@
 - name: Collect hostname, zone, IPv4, and IPv6 information
   hosts: all
   gather_facts: false
+  connection: local
   vars:
     host_info_list: []  # Initialize an empty list to store the results
 
