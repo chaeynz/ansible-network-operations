@@ -1,6 +1,6 @@
 ---
 - name: Create dns record
-  hosts: "{{ lookup('ansible.builtin.env', 'IPA_HOST') | default(omit) }}"
+  hosts: "{{ _hosts | default(omit) }}"
   vars:
     dns_records: "{{ dns_records | mandatory }}"
   tasks:
