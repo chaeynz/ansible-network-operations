@@ -1,0 +1,38 @@
+---
+- name: Collect hostname, zone, IPv4, and IPv6 information
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Get DNS records from Netbox
+      vars:
+        query: |
+          { {
+            netbox_dns_record_list(filters: { NOT: { type: "SOA", OR: { type: "NS"} } }) {
+              name, value, type,
+              zone { name },
+            }
+          } }
+
+      ansible.builtin.uri:
+        url: "{{ lookup('ansible.builtin.env', 'NETBOX_API') }}"
+        method: POST
+        headers:
+          Authorization: "Token {{ lookup('ansible.builtin.env', 'NETBOX_TOKEN') }}"
+        body:
+          query: "{ query: {{ query | default('') }} }"
+        status_code: 200
+        body_format: json
+      register: response
+
+
+- name: Create dns record
+  hosts: localhost
+  tasks:
+    - name: Ensure dns record is present
+      community.general.ipa_dnsrecord:
+        state: "{{ _state | default('present') }}"
+        zone_name: "{{ item.zone.name }}"
+        record_name: "{{ item.name }}"
+        record_type: "{{ item.type }}"
+        record_value: "{{ item.value }}"
+      loop: "{{ response.data.netbox_dns_record_list | default([]) }}"
