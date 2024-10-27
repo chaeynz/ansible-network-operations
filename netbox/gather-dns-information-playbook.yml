@@ -27,4 +27,4 @@
     - name: Leave artifacts
       ansible.builtin.set_stats:
         data:
-          dns_records: "{{ response.data.netbox_dns_record_list }}"
+          dns_records: "{{ response }}"
