@@ -34,4 +34,4 @@
       ansible.builtin.set_stats:
         data:
           dns_records: "{{ response.json.data.netbox_dns_record_list }}"
-      when: response.data is defined
+      when: response.json.data is defined
