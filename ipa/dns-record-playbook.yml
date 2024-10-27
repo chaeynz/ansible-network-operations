@@ -1,6 +1,6 @@
 ---
 - name: Create dns record
-  hosts: "{{ IPA_HOST }}"
+  hosts: "{{ _hosts | default(omit) }}"
   vars:
     dns_records: "{{ dns_records | mandatory }}"
   tasks:
