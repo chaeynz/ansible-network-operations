@@ -1,0 +1,33 @@
+---
+- name: Collect hostname, zone, IPv4, and IPv6 information
+  hosts: all
+  gather_facts: false
+  vars:
+    host_info_list: []  # Initialize an empty list to store the results
+
+  tasks:
+    - name: Filter primary IP addresses with a dns_name
+      set_fact:
+        host_info_list: "{{ host_info_list + [host_info] }}"
+      loop: "{{ ansible_facts['interfaces'] | default([]) }}"
+      vars:
+        ipv4_info: "{{ item.ip_addresses | selectattr('address', 'equalto', ansible_facts['primary_ip4'] + '/24') | list | first }}"
+        ipv6_info: "{{ item.ip_addresses | selectattr('address', 'equalto', ansible_facts['primary_ip6'] + '/64') | list | first }}"
+        dns_name_zone: "{{ ipv4_info.custom_fields.dns_name.zone.name if ipv4_info.custom_fields.dns_name is defined else None }}"
+      when: ipv4_info.custom_fields.dns_name is defined or ipv6_info.custom_fields.dns_name is defined
+      loop_control:
+        label: "{{ item.name }}"
+      register: host_info
+
+    - name: Set
+      ansible.builtin.set_stats:
+        data:
+          host_info:
+            hostname: "{{ ansible_hostname }}"
+            zone: "{{ dns_name_zone }}"
+            ip4: "{{ ansible_facts['primary_ip4'] }}"
+            ip6: "{{ ansible_facts['primary_ip6'] }}"
+
+    - name: Display collected host information
+      debug:
+        msg: "{{ host_info_list }}"
