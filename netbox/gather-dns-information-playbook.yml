@@ -24,7 +24,7 @@
       ansible.builtin.set_stats:
         data:
           host_info:
-            hostname: "{{ ansible_hostname }}"
+            hostname: "{{ inventory_hostname }}"
             zone: "{{ dns_name_zone }}"
             ip4: "{{ ansible_facts['primary_ip4'] }}"
             ip6: "{{ ansible_facts['primary_ip6'] }}"
