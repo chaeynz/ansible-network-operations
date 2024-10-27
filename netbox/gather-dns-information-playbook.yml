@@ -1,34 +1,30 @@
 ---
 - name: Collect hostname, zone, IPv4, and IPv6 information
-  hosts: all
+  hosts: localhost
   gather_facts: false
-  connection: local
-  vars:
-    host_info_list: []  # Initialize an empty list to store the results
-
   tasks:
-    - name: Filter primary IP addresses with a dns_name
-      set_fact:
-        host_info_list: "{{ host_info_list + [host_info] }}"
-      loop: "{{ ansible_facts['interfaces'] | default([]) }}"
+    - name: Get DNS records from Netbox
       vars:
-        ipv4_info: "{{ item.ip_addresses | selectattr('address', 'equalto', ansible_facts['primary_ip4'] + '/24') | list | first }}"
-        ipv6_info: "{{ item.ip_addresses | selectattr('address', 'equalto', ansible_facts['primary_ip6'] + '/64') | list | first }}"
-        dns_name_zone: "{{ ipv4_info.custom_fields.dns_name.zone.name if ipv4_info.custom_fields.dns_name is defined else None }}"
-      when: ipv4_info.custom_fields.dns_name is defined or ipv6_info.custom_fields.dns_name is defined
-      loop_control:
-        label: "{{ item.name }}"
-      register: host_info
+        query: |
+          { {
+            netbox_dns_record_list(filters: { NOT: { type: "SOA", OR: { type: "NS"} } }) {
+              name, value, type,
+              zone { name },
+            }
+          } }
 
-    - name: Set
+      ansible.builtin.uri:
+        url: "{{ lookup('ansible.builtin.env', 'NETBOX_API') }}"
+        method: POST
+        headers:
+          Authorization: "Token {{ lookup('ansible.builtin.env', 'NETBOX_TOKEN') }}"
+        body:
+          query: "{ query: {{ query | default('') }} }"
+        status_code: 200
+        body_format: json
+      register: response
+
+    - name: Leave artifacts
       ansible.builtin.set_stats:
         data:
-          host_info:
-            hostname: "{{ inventory_hostname }}"
-            zone: "{{ dns_name_zone }}"
-            ip4: "{{ ansible_facts['primary_ip4'] }}"
-            ip6: "{{ ansible_facts['primary_ip6'] }}"
-
-    - name: Display collected host information
-      debug:
-        msg: "{{ host_info_list }}"
+          dns_records: "{{ response.data.netbox_dns_record_list }}"
