@@ -19,7 +19,7 @@
         headers:
           Authorization: "Token {{ lookup('ansible.builtin.env', 'NETBOX_TOKEN') }}"
         body:
-          query: "{ query: {{ query | default('') }} }"
+          query: "{ query {{ query | default('') }} }"
         status_code: 200
         body_format: json
       register: response
