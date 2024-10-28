@@ -1,11 +1,13 @@
 ---
 - name: Create dns record
-  hosts: "{{ _hosts | default(omit) }}"
+  hosts: localhost
+  gather_facts: false
   vars:
     dns_records: "{{ dns_records | mandatory }}"
   tasks:
     - name: Ensure dns record is present
       community.general.ipa_dnsrecord:
+        validate_certs: false
         state: "{{ _state | default('present') }}"
         zone_name: "{{ item.zone.name }}"
         record_name: "{{ item.name }}"
