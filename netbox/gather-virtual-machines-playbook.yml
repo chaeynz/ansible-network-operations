@@ -1,0 +1,44 @@
+---
+- name: Collect hostname, zone, IPv4, and IPv6 information
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Get DNS records from Netbox
+      vars:
+        query: |
+          {
+            virtual_machine_list {
+              name,
+              primary_ip4 {
+                address
+              },
+              primary_ip6 {
+                address
+              }
+            }
+          }
+
+
+      ansible.builtin.uri:
+        url: "{{ lookup('ansible.builtin.env', 'NETBOX_API') }}/graphql/"
+        method: POST
+        headers:
+          Authorization: "Token {{ lookup('ansible.builtin.env', 'NETBOX_TOKEN') }}"
+        body: { query: "{{ query | default('') }}" }
+
+        status_code: 200
+        body_format: json
+      register: response
+
+
+    - name: Fail on error in graphql response
+      ansible.builtin.fail:
+        msg: "{{ response.json.errors[0].message }}"
+      when: response.json.errors is defined
+
+
+    - name: Leave artifacts
+      ansible.builtin.set_stats:
+        data:
+          virtual_machines: "{{ response.json.data.virtual_machine_list }}"
+      when: response.json.data is defined
