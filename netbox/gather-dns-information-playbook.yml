@@ -24,7 +24,7 @@
         body_format: json
       register: response
 
-    - name: LOL
+    - name: Fail on error in graphql response
       ansible.builtin.fail:
         msg: "{{ response.json.errors[0].message }}"
       when: response.json.errors is defined
