@@ -1,0 +1,23 @@
+---
+- name: "Netbox DNS Record"
+  hosts: localhost
+  vars:
+    # Necessary because module doesn't support looking up environment variables by default yet
+    credentials: &credentials
+      netbox_url: "{{ lookup('ansible.builtin.env', 'NETBOX_API') }}"
+      netbox_token: "{{ lookup('ansible.builtin.env', 'NETBOX_TOKEN') }}"
+      validate_certs: "{{ validate_certs | default(true) }}"
+  tasks:
+    - name: "Create DNS record"
+      chaeynz.netbox_dns.netbox_nb_dns_record:
+        <<: *credentials
+        state: "{{ _state | default('present') }}"
+        data:
+          name: "{{ name }}"
+          zone: "{{ zone }}"
+          type: "{{ type }}"
+          value: "{{ value }}"
+          status: "{{ status | default('active') }}"
+          description: "{{ description | default(omit) }}"
+          disable_ptr: "{{ disable_ptr | default(false) }}"
+          tenant: "{{ tenant | default(omit) }}"
