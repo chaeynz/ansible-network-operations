@@ -1,0 +1,14 @@
+---
+- name: Listen for all events on a webhook
+  hosts: all
+  sources:
+    - ansible.eda.webhook:
+        port: "{{ webhook_port | default(5000) }}"
+  rules:
+    - name: Netbox
+      condition: |
+        event.payload == ""
+      action:
+        run_workflow_template:
+          name: Idontexist
+          organization: default
