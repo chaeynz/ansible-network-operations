@@ -8,7 +8,7 @@
     - name: Netbox | Create A record
       condition: |
         event.payload.username != "ansible" and
-        event.payload.data.primary_ip4 != "null"
+        event.payload.data.primary_ip4 != null
       action:
         run_workflow_template:
           name: "Find tenant DNS zone and create record in zone"
@@ -23,7 +23,7 @@
     - name: Netbox | Create AAAA record
       condition: |
         event.payload.username != "ansible" and
-        event.payload.data.primary_ip6 != "null"
+        event.payload.data.primary_ip6 != null
       action:
         run_workflow_template:
           name: "Find tenant DNS zone and create record in zone"
