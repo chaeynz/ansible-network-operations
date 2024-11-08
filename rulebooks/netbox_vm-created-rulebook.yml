@@ -6,9 +6,6 @@
         port: "{{ webhook_port | default(5000) }}"
   rules:
     - name: Netbox
-      condition: |
-        event.payload == ""
+      condition: event.payload is defined
       action:
-        run_workflow_template:
-          name: Idontexist
-          organization: default
+        debug:
