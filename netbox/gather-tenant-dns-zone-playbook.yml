@@ -23,11 +23,15 @@
 
     - name: Save name of DNS zone as variable
       ansible.builtin.set_fact:
-        dns_zone: "{{ response[0].value.custom_fields[custom_field_name].name }}"
+        zone: "{{ response[0].value.custom_fields[custom_field_name].name }}"
       when: response[0].value.custom_fields[custom_field_name]
+
+    - name: Print dns_zone
+      ansible.builtin.debug:
+        msg: "{{ zone }}"
 
     - name: Leave dns_zone in artifacts
       ansible.builtin.set_stats:
         data:
-          dns_zone: "{{ dns_zone }}"
+          zone: "{{ dns_zone }}"
         aggregate: true
