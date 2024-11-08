@@ -1,0 +1,33 @@
+---
+- name: Query Netbox for the dns zone defined in a tenants custom_fields
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  vars:
+    tenant: "{{ tenant_name | mandatory }}"
+    custom_field_name: "{{ custom_field_name_zone | default('dns_zone') }}"
+  tasks:
+    - name: Query tenants in Netbox
+      ansible.builtin.set_fact:
+        response: "{{ query('netbox.netbox.nb_lookup', 'tenants', api_filter='name=' + tenant) }}"
+
+    - name: Fail if the query result is ambiguous
+      ansible.builtin.fail:
+        msg: "Filter returned {{ response | length }} objects, needs to be 1"
+      when: response | length != 1
+
+    - name: Fail if dns name not in custom_field
+      ansible.builtin.fail:
+        msg: custom field for DNS zone not found in Netbox object
+      when: not response[0].value.custom_fields
+
+    - name: Save name of DNS zone as variable
+      ansible.builtin.set_fact:
+        dns_zone: "{{ response[0].value.custom_fields[custom_field_name].name }}"
+      when: response[0].value.custom_fields[custom_field_name]
+
+    - name: Leave dns_zone in artifacts
+      ansible.builtin.set_stats:
+        data:
+          dns_zone: "{{ dns_zone }}"
+        aggregate: true
