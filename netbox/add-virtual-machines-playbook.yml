@@ -3,6 +3,8 @@
 - name: Add Virtual Machines to Netbox
   vars:
     credentials: &credentials
+      netbox_url: "{{ lookup('ansible.builtin.env', 'NETBOX_API') }}"
+      netbox_token: "{{ lookup('ansible.builtin.env', 'NETBOX_TOKEN') }}"
       validate_certs: "{{ _validate_certs | default(true) }}"
   hosts: localhost
   tasks:
