@@ -7,8 +7,9 @@
   rules:
     - name: Netbox | Create A record
       condition: |
-        event.payload.username != "ansible" and
-        event.payload.data.primary_ip4 != null
+        payload.username != "ansible" and
+        payload.data.tenant != null and
+        payload.data.primary_ip4 != null
       action:
         run_workflow_template:
           name: "Find tenant DNS zone and create record in zone"
@@ -18,11 +19,12 @@
               tenant: "{{ event.payload.data.tenant.name }}"
               name: "{{ event.payload.data.name }}"
               type: A
-              value: "{{ event.payload.event.payload.data.primary_ip4 }}"
+              value: "{{ event.payload.data.primary_ip4 }}"
 
     - name: Netbox | Create AAAA record
       condition: |
-        event.payload.username != "ansible" and
+        payload.username != "ansible" and
+        payload.data.tenant != null and
         event.payload.data.primary_ip6 != null
       action:
         run_workflow_template:
@@ -33,7 +35,7 @@
               tenant: "{{ event.payload.data.tenant.name }}"
               name: "{{ event.payload.data.name }}"
               type: AAAA
-              value: "{{ event.payload.event.payload.data.primary_ip6 }}"
+              value: "{{ event.payload.data.primary_ip6 }}"
 
 
         # TODO: if event.payload.snapshots.prechange.name is defined and != event.payload.snapshots.postchange.name ; do delete_old_dns_name-playbook
