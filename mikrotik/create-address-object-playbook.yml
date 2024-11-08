@@ -4,7 +4,7 @@
   gather_facts: false
   tasks:
     - name: Gather primary IP and VM name
-      set_fact:
+      ansible.builtin.set_fact:
         vm_info:
           ip: "{{ primary_ip4 }}"
           name: "{{ interfaces[0]['virtual_machine']['name'] }}"
@@ -30,4 +30,3 @@
       with_items: "{{ vcenter_vm_info }}"
       vars:
         vcenter_vm_info: "{{ groups['RC'] | map('extract', hostvars, 'vm_info') | list }}"
-        
