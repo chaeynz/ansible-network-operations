@@ -6,10 +6,11 @@
         port: "{{ webhook_port | default(5000) }}"
   rules:
     - name: Netbox | Create A record
-      condition: |
-        payload.username != "ansible" and
-        payload.data.tenant != null and
-        payload.data.primary_ip4 != null
+      condition:
+        all:
+          - payload.username != "ansible"
+          - payload.data.tenant != null
+          - payload.data.primary_ip4 != null
       action:
         run_workflow_template:
           name: "Find tenant DNS zone and create record in zone"
@@ -22,10 +23,11 @@
               value: "{{ event.payload.data.primary_ip4 }}"
 
     - name: Netbox | Create AAAA record
-      condition: |
-        payload.username != "ansible" and
-        payload.data.tenant != null and
-        event.payload.data.primary_ip6 != null
+      condition:
+        all:
+          - payload.username != "ansible"
+          - payload.data.tenant != null
+          - payload.data.primary_ip6 != null
       action:
         run_workflow_template:
           name: "Find tenant DNS zone and create record in zone"
@@ -36,7 +38,6 @@
               name: "{{ event.payload.data.name }}"
               type: AAAA
               value: "{{ event.payload.data.primary_ip6 }}"
-
 
         # TODO: if event.payload.snapshots.prechange.name is defined and != event.payload.snapshots.postchange.name ; do delete_old_dns_name-playbook
 
