@@ -6,6 +6,16 @@
     - ansible.eda.webhook:
         port: "{{ webhook_port | default(5000) }}"
   rules:
+    - name:
+      condition:
+        all:
+          - event.payload is defined
+      action:
+        debug: |
+          "{{ event.payload.username }} != ansible"
+          "{{ event.payload.data.tenant }} != null"
+          "{{ event.payload.data.primary_ip4 }} != null"
+
     - name: Netbox | Create A record
       condition:
         all:
@@ -42,7 +52,7 @@
 
         # TODO: if event.payload.snapshots.prechange.name is defined and != event.payload.snapshots.postchange.name ; do delete_old_dns_name-playbook
 
-    - name: Netbox
+    - name: Debug
       condition: event.payload is defined
       action:
         debug:
