@@ -1,12 +1,14 @@
 ---
 # This playbook expects vm_info as an artifact in an AWX Workflow
 - name: Add Virtual Machines to Netbox
+  hosts: localhost
+  connection: local
+  gather_facts: false
   vars:
     credentials: &credentials
       netbox_url: "{{ lookup('ansible.builtin.env', 'NETBOX_API') }}"
       netbox_token: "{{ lookup('ansible.builtin.env', 'NETBOX_TOKEN') }}"
       validate_certs: "{{ _validate_certs | default(true) }}"
-  hosts: localhost
   tasks:
     - name: Create Virtual Machine object
       netbox.netbox.netbox_virtual_machine:

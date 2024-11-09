@@ -1,6 +1,8 @@
 ---
 - name: "Netbox DNS Record"
   hosts: localhost
+  connection: local
+  gather_facts: false
   vars:
     # Necessary because module doesn't support looking up environment variables by default yet
     credentials: &credentials

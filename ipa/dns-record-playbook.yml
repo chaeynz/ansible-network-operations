@@ -1,6 +1,7 @@
 ---
 - name: Create dns record
   hosts: localhost
+  connection: local
   gather_facts: false
   vars:
     dns_records: "{{ dns_records | mandatory }}"

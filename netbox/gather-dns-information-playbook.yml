@@ -1,6 +1,7 @@
 ---
 - name: Collect hostname, zone, IPv4, and IPv6 information
   hosts: localhost
+  connection: local
   gather_facts: false
   tasks:
     - name: Get DNS records from Netbox
