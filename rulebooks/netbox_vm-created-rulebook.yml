@@ -20,7 +20,7 @@
               tenant: "{{ event.payload.data.tenant.name }}"
               name: "{{ event.payload.data.name }}"
               type: A
-              value: "{{ event.payload.data.primary_ip4 }}"
+              value: "{{ event.payload.data.primary_ip4.address }}"
 
     - name: Netbox | Create AAAA record
       condition:
@@ -37,7 +37,7 @@
               tenant: "{{ event.payload.data.tenant.name }}"
               name: "{{ event.payload.data.name }}"
               type: AAAA
-              value: "{{ event.payload.data.primary_ip6 }}"
+              value: "{{ event.payload.data.primary_ip6.address }}"
 
         # TODO: if event.payload.snapshots.prechange.name is defined and != event.payload.snapshots.postchange.name ; do delete_old_dns_name-playbook
 
