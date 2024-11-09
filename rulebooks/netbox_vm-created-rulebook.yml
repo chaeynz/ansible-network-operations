@@ -6,7 +6,7 @@
     - ansible.eda.webhook:
         port: "{{ webhook_port | default(5000) }}"
   rules:
-    - name:
+    - name: More Debug
       condition:
         all:
           - event.payload is defined
