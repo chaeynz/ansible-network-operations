@@ -5,22 +5,10 @@
     - ansible.eda.webhook:
         port: "{{ webhook_port | default(5000) }}"
   rules:
-    - name: More Debug
-      condition:
-        all:
-          - event.payload is defined
-      action:
-        debug:
-          msg:
-            - "{{ event.payload.username }} != ansible"
-            - "{{ event.payload.data.tenant }} != null"
-            - "{{ event.payload.data.primary_ip4 }} != null"
-
     - name: Netbox | Create A record
       condition:
         all:
           - event.payload.username != "ansible"
-
       action:
         run_workflow_template:
           name: "Find tenant DNS zone and create record in zone"
