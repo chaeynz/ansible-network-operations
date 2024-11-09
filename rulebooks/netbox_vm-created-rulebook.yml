@@ -11,10 +11,11 @@
         all:
           - event.payload is defined
       action:
-        debug: |
-          "{{ event.payload.username }} != ansible"
-          "{{ event.payload.data.tenant }} != null"
-          "{{ event.payload.data.primary_ip4 }} != null"
+        debug:
+          msg:
+            - "{{ event.payload.username }} != ansible"
+            - "{{ event.payload.data.tenant }} != null"
+            - "{{ event.payload.data.primary_ip4 }} != null"
 
     - name: Netbox | Create A record
       condition:
