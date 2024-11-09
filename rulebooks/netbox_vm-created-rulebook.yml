@@ -1,6 +1,7 @@
 ---
 - name: Listen for all events on a webhook
   hosts: all
+  execution_strategy: parallel
   sources:
     - ansible.eda.webhook:
         port: "{{ webhook_port | default(5000) }}"
@@ -9,8 +10,8 @@
       condition:
         all:
           - event.payload.username != "ansible"
-          - event.payload.data.tenant != null
-          - event.payload.data.primary_ip4 != null
+          - event.payload.data.tenant != "null"
+          - event.payload.data.primary_ip4 != "null"
       action:
         run_workflow_template:
           name: "Find tenant DNS zone and create record in zone"
@@ -26,8 +27,8 @@
       condition:
         all:
           - event.payload.username != "ansible"
-          - event.payload.data.tenant != null
-          - event.payload.data.primary_ip6 != null
+          - event.payload.data.tenant != "null"
+          - event.payload.data.primary_ip6 != "null"
       action:
         run_workflow_template:
           name: "Find tenant DNS zone and create record in zone"
