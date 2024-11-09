@@ -21,8 +21,7 @@
       condition:
         all:
           - event.payload.username != "ansible"
-          - event.payload.data.tenant != "null"
-          - event.payload.data.primary_ip4 != "null"
+
       action:
         run_workflow_template:
           name: "Find tenant DNS zone and create record in zone"
