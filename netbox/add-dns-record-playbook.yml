@@ -16,7 +16,7 @@
           name: "{{ name }}"
           zone: "{{ zone }}"
           type: "{{ type }}"
-          value: "{{ value | ansible.utils.ipaddr('host') }}"
+          value: "{{ value | ansible.utils.ipaddr('address') }}"
           status: "{{ status | default('active') }}"
           description: "{{ description | default(omit) }}"
           disable_ptr: "{{ disable_ptr | default(false) }}"
