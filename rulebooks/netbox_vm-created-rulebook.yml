@@ -1,7 +1,6 @@
 ---
 - name: Listen for all events on a webhook
   hosts: all
-  execution_strategy: parallel
   sources:
     - ansible.eda.webhook:
         port: "{{ webhook_port | default(5000) }}"
