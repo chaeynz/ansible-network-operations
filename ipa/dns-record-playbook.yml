@@ -3,8 +3,6 @@
   hosts: localhost
   connection: local
   gather_facts: false
-  vars:
-    dns_records: "{{ dns_records | mandatory }}"
   tasks:
     - name: Ensure dns record is present
       community.general.ipa_dnsrecord:
