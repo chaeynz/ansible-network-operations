@@ -5,7 +5,55 @@
     - ansible.eda.webhook:
         port: "{{ webhook_port | default(5000) }}"
   rules:
-    - name: Netbox | Create DNS record
+    - name: Netbox | Create A record
+      condition: |
+        event.payload.username != "ansible" and
+        event.payload.data.tenant != none and
+        (
+          event.payload.data.primary_ip4 != none or
+          event.payload.data.primary_ip6 == none
+        )
+      action:
+        run_workflow_template:
+          name: "Find tenant DNS zone and create record in zone"
+          organization: Default
+          job_args:
+            extra_vars:
+              dns_records:
+                - tenant: "{{ event.payload.data.tenant.name }}"
+                  dns_name: "{{ event.payload.data.name }}"
+                  dns_value: "{{ event.payload.data.primary_ip4.address }}"
+                  dns_type: "A"
+                - tenant: "{{ event.payload.data.tenant.name }}"
+                  dns_name: "{{ event.payload.data.name }}"
+                  dns_value: "{{ event.payload.data.primary_ip6.address }}"
+                  dns_type: "AAAA"
+
+    - name: Netbox | Create AAAA record
+      condition: |
+        event.payload.username != "ansible" and
+        event.payload.data.tenant != none and
+        (
+          event.payload.data.primary_ip4 == none or
+          event.payload.data.primary_ip6 != none
+        )
+      action:
+        run_workflow_template:
+          name: "Find tenant DNS zone and create record in zone"
+          organization: Default
+          job_args:
+            extra_vars:
+              dns_records:
+                - tenant: "{{ event.payload.data.tenant.name }}"
+                  dns_name: "{{ event.payload.data.name }}"
+                  dns_value: "{{ event.payload.data.primary_ip4.address }}"
+                  dns_type: "A"
+                - tenant: "{{ event.payload.data.tenant.name }}"
+                  dns_name: "{{ event.payload.data.name }}"
+                  dns_value: "{{ event.payload.data.primary_ip6.address }}"
+                  dns_type: "AAAA"
+
+    - name: Netbox | Create A and AAAA record
       condition: |
         event.payload.username != "ansible" and
         event.payload.data.tenant != none and
