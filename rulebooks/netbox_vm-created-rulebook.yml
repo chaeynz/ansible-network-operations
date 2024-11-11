@@ -24,10 +24,6 @@
                   dns_name: "{{ event.payload.data.name }}"
                   dns_value: "{{ event.payload.data.primary_ip4.address }}"
                   dns_type: "A"
-                - tenant: "{{ event.payload.data.tenant.name }}"
-                  dns_name: "{{ event.payload.data.name }}"
-                  dns_value: "{{ event.payload.data.primary_ip6.address }}"
-                  dns_type: "AAAA"
 
     - name: Netbox | Create AAAA record
       condition: |
@@ -44,10 +40,6 @@
           job_args:
             extra_vars:
               dns_records:
-                - tenant: "{{ event.payload.data.tenant.name }}"
-                  dns_name: "{{ event.payload.data.name }}"
-                  dns_value: "{{ event.payload.data.primary_ip4.address }}"
-                  dns_type: "A"
                 - tenant: "{{ event.payload.data.tenant.name }}"
                   dns_name: "{{ event.payload.data.name }}"
                   dns_value: "{{ event.payload.data.primary_ip6.address }}"
