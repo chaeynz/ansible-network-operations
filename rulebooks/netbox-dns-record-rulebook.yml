@@ -1,0 +1,11 @@
+---
+- name: Listen for all events on a webhook
+  hosts: all
+  sources:
+    - ansible.eda.webhook:
+        port: "{{ webhook_port | default(5000) }}"
+  rules:
+    - name: Debug
+      condition: event.payload is defined
+      action:
+        debug:
