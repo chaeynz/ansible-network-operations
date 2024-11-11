@@ -11,5 +11,5 @@
         zone_name: "{{ item.dns_zone }}"
         record_name: "{{ item.dns_name }}"
         record_type: "{{ item.dns_type }}"
-        record_value: "{{ item.dns_value }}"
+        record_value: "{{ item.dns_value | ansible.utils.ipaddr('address') }}"
       loop: "{{ __dns_records }}"
