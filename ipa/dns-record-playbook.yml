@@ -12,4 +12,4 @@
         record_name: "{{ item.dns_name }}"
         record_type: "{{ item.dns_type }}"
         record_value: "{{ item.dns_value }}"
-      loop: "{{ dns_records }}"
+      loop: "{{ __dns_records }}"
