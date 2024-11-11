@@ -1,0 +1,25 @@
+---
+- name: Show chaeynz how to combine
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Create the tenant map
+      loop: "{{ query('netbox.netbox.nb_lookup', 'tenants') | selectattr('value.custom_fields.dns_zone', '!=', none) }}"
+      ansible.builtin.set_fact:
+        tenant_map: "{{ tenant_map | default([]) | combine({
+          item.value.name | lower: { 'dns_zone': item.value.custom_fields.dns_zone.name}
+        }) }}"
+
+    - name: Debug the tenants
+      loop: "{{ dns_records }}"
+      ansible.builtin.set_fact:
+        mapped_records: "{{ mapped_records | default([]) + [item | combine(tenant_map[item.tenant | lower])] }}"
+
+    - name: Debug the tenant map
+      ansible.builtin.debug:
+        msg: "{{ tenant_map }}"
+
+    - name: Debug the records
+      ansible.builtin.debug:
+        msg: "{{ mapped_records }}"

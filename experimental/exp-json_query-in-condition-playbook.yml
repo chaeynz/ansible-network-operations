@@ -1,0 +1,22 @@
+---
+- name: Do something
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    dns_records:
+      - tenant: "some_tenant"
+        dns_name: "test1"
+        dns_type: "A"
+      - tenant: "some_tenant"
+        dns_name: "test2"
+        dns_type: "A"
+  tasks:
+    - name: Check if tenant is present with selectattr
+      ansible.builtin.debug:
+        msg: "{{ dns_records | selectattr('tenant', 'defined') | selectattr('tenant', '!=', none) | list | length == dns_records | length }}"
+
+    - name: Check if tenant is present with json_query
+      ansible.builtin.debug:
+        msg: "{{ (dns_records | community.general.json_query('[*].tenant') | list | length == dns_records | length)
+         and not (dns_records | community.general.json_query('[*].dns_zone') | list | length == dns_records | length) }}"
