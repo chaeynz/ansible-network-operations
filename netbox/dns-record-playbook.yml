@@ -43,3 +43,8 @@
           disable_ptr: "{{ item.disable_ptr | default(false) }}"
           tenant: "{{ item.tenant | default(omit) }}"
       loop: "{{ mapped_records }}"
+
+    - name: Leave artifacts
+      ansible.builtin.set_stats:
+        data:
+          dns_records: "{{ mapped_records }}"
