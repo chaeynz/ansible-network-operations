@@ -47,4 +47,5 @@
     - name: Leave artifacts
       ansible.builtin.set_stats:
         data:
-          dns_records: "{{ mapped_records }}"
+          __dns_records: "{{ mapped_records }}"
+
