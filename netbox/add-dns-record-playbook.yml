@@ -10,16 +10,36 @@
       netbox_token: "{{ lookup('ansible.builtin.env', 'NETBOX_TOKEN') }}"
       validate_certs: "{{ validate_certs | default(true) }}"
   tasks:
+    - name: Create mapped_records if dns_zone already present
+      ansible.builtin.set_fact:
+        mapped_records: "{{ dns_records }}"
+      when: "(dns_records | mandatory | community.general.json_query('[*].dns_zone') | list | length == dns_records | length)"
+
+    - name: Create the tenant map for further use to query tenant->dns_zone from
+      loop: "{{ query('netbox.netbox.nb_lookup', 'tenants') | selectattr('value.custom_fields.' + custom_field_name | default('dns_zone'), '!=', none) }}"
+      ansible.builtin.set_fact:
+        tenant_map: "{{ tenant_map | default([]) | combine({item.value.name | lower: {'dns_zone': item.value.custom_fields[custom_field_name].name}}) }}"
+      when: "(dns_records | community.general.json_query('[*].tenant') | list | length == dns_records | length)
+         and not (dns_records | community.general.json_query('[*].dns_zone') | list | length == dns_records | length)"
+
+    - name: Create mapped_records for further use from tenant map
+      loop: "{{ dns_records }}"
+      ansible.builtin.set_fact:
+        mapped_records: "{{ mapped_records | default([]) + [item | combine(tenant_map[item.tenant | lower])] }}"
+      when: "(dns_records | community.general.json_query('[*].tenant') | list | length == dns_records | length)
+         and not (dns_records | community.general.json_query('[*].dns_zone') | list | length == dns_records | length)"
+
     - name: "Create DNS record"
       chaeynz.netbox_dns.netbox_nb_dns_record:
         <<: *credentials
         state: "{{ _state | default('present') }}"
         data:
-          name: "{{ name }}"
-          zone: "{{ zone }}"
-          type: "{{ type }}"
-          value: "{{ value | ansible.utils.ipaddr('address') }}"
-          status: "{{ status | default('active') }}"
-          description: "{{ description | default(omit) }}"
-          disable_ptr: "{{ disable_ptr | default(false) }}"
-          tenant: "{{ tenant | default(omit) }}"
+          name: "{{ item.dns_name }}"
+          zone: "{{ item.dns_zone }}"
+          type: "{{ item.dns_type }}"
+          value: "{{ item.dns_value | ansible.utils.ipaddr('address') }}"
+          status: "{{ item.status | default('active') }}"
+          description: "{{ item.description | default(omit) }}"
+          disable_ptr: "{{ item.disable_ptr | default(false) }}"
+          tenant: "{{ item.tenant | default(omit) }}"
+      loop: "{{ mapped_records }}"
