@@ -18,7 +18,7 @@
     - name: Create the tenant map for further use to query tenant->dns_zone from
       loop: "{{ query('netbox.netbox.nb_lookup', 'tenants') | selectattr('value.custom_fields.' + custom_field_name | default('dns_zone'), '!=', none) }}"
       ansible.builtin.set_fact:
-        tenant_map: "{{ tenant_map | default([]) | combine({item.value.name | lower: {'dns_zone': item.value.custom_fields[custom_field_name].name}}) }}"
+        tenant_map: "{{ tenant_map | default([]) | combine({item.value.name | lower: {'dns_zone': item.value.custom_fields[custom_field_name | default('dns_zone')].name}}) }}"
       when: "(dns_records | community.general.json_query('[*].tenant') | list | length == dns_records | length)
          and not (dns_records | community.general.json_query('[*].dns_zone') | list | length == dns_records | length)"
 
