@@ -8,10 +8,10 @@
     - name: Netbox | Create DNS record
       condition: |
         event.payload.username != "ansible" and
-        event.payload.data.tenant != "null" and
+        event.payload.data.tenant != none and
         (
-          event.payload.data.primary_ip4 != "null" or
-          event.payload.data.primary_ip6 != "null"
+          event.payload.data.primary_ip4 != none or
+          event.payload.data.primary_ip6 != none
         )
       action:
         run_workflow_template:
@@ -19,10 +19,15 @@
           organization: Default
           job_args:
             extra_vars:
-              tenant: "{{ event.payload.data.tenant.name }}"
-              name: "{{ event.payload.data.name }}"
-              type: A
-              value: "{{ event.payload.data.primary_ip4.address }}"
+              dns_records:
+                - tenant: "{{ event.payload.data.tenant.name }}"
+                  dns_name: "{{ event.payload.data.name }}"
+                  dns_value: "{{ event.payload.data.primary_ip4.address }}"
+                  dns_type: "A"
+                - tenant: "{{ event.payload.data.tenant.name }}"
+                  dns_name: "{{ event.payload.data.name }}"
+                  dns_value: "{{ event.payload.data.primary_ip6.address }}"
+                  dns_type: "AAAA"
 
         # TODO: if event.payload.snapshots.prechange.name is defined and != event.payload.snapshots.postchange.name ; do delete_old_dns_name-playbook
 
