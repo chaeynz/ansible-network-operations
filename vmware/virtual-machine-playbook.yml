@@ -1,0 +1,21 @@
+---
+- name: Deploy a template on vCenter
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Fail if missing vars
+      ansible.builtin.fail:
+        msg: Please specify either cluster or resource pool
+      when: _cluster is undefined and resource_pool is undefined
+
+    - name: Deploy Virtual Machine from template
+      community.vmware.vmware_guest:
+        template: "{{ template | default(omit) }}"
+        datastore: "{{ datastore | mandatory }}"
+        folder: "{{ folder | default('/') }}"
+        datacenter: "{{ datacenter }}"
+        name: "{{ vm_name | mandatory }}"
+        resource_pool: "{{ resource_pool | default(omit) }}"
+        cluster: "{{ _cluster | default(omit) }}"
+        state: "{{ _state | default('present') }}"
