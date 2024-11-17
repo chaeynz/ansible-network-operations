@@ -1,0 +1,15 @@
+---
+- name: Create dns record
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Ensure dns record is present
+      community.general.ipa_dnsrecord:
+        validate_certs: false
+        state: "{{ _state | default('present') }}"
+        zone_name: "{{ item.dns_zone }}"
+        record_name: "{{ item.dns_name }}"
+        record_type: "{{ item.dns_type | default(omit) }}"
+        record_value: "{{ item.dns_value | default(omit) | ansible.utils.ipaddr('address') }}"
+      loop: "{{ __dns_records }}"

@@ -1,0 +1,33 @@
+---
+- name: Deploy a template on vCenter
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Find Guest's Folder using name
+      community.vmware.vmware_guest_find:
+        name: "{{ vm_name }}"
+      delegate_to: localhost
+      register: vm_folder
+
+    - name: Debug
+      ansible.builtin.debug:
+        msg: "{{ vm_folder }}"
+
+    - name: Attempt and graceful roll back demo
+      block:
+        - name: Print a message
+          community.vmware.vmware_guest_find:
+            name: "{{ vm_name }}"
+        - name: Never print this
+          ansible.builtin.set_fact:
+            vm_exists: true
+      rescue:
+        - name: Print when errors
+          ansible.builtin.set_fact:
+            vm_exists: false
+
+    - name: Fail if VM exists
+      ansible.builtin.fail:
+        msg: "VM {{ vm_name }} already exists"
+      when: vm_exists
