@@ -17,3 +17,4 @@ group_by:
 
 query_filters:
   - has_primary_ip: "true"
+  - tenant: "{{ _tenant }}"
