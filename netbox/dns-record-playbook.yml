@@ -10,15 +10,24 @@
       netbox_token: "{{ lookup('ansible.builtin.env', 'NETBOX_TOKEN') }}"
       validate_certs: "{{ validate_certs | default(true) }}"
   tasks:
+    - name: Fail if neither tenant nor dns_zone is defined
+      ansible.builtin.fail:
+        msg: "All dns_records passed must have either the Tenant or the DNS zone specified "
+      when: "not (dns_records | community.general.json_query('[*].tenant') | list | length == dns_records | length)
+        and not (dns_records | mandatory | community.general.json_query('[*].dns_zone') | list | length == dns_records | length)
+        and (_state | default('present') == 'present')"
+
     - name: Create mapped_records if dns_zone already present
       ansible.builtin.set_fact:
         mapped_records: "{{ dns_records }}"
-      when: "(dns_records | mandatory | community.general.json_query('[*].dns_zone') | list | length == dns_records | length)"
+      when: "(dns_records | community.general.json_query('[*].dns_zone') | list | length == dns_records | length)"
 
     - name: Create the tenant map for further use to query tenant->dns_zone from
       loop: "{{ query('netbox.netbox.nb_lookup', 'tenants') | selectattr('value.custom_fields.' + custom_field_name | default('dns_zone'), '!=', none) }}"
       ansible.builtin.set_fact:
-        tenant_map: "{{ tenant_map | default([]) | combine({item.value.name | lower: {'dns_zone': item.value.custom_fields[custom_field_name | default('dns_zone')].name}}) }}"
+        tenant_map: "{{ tenant_map | default([]) |
+          combine({item.value.name |
+          lower: {'dns_zone': item.value.custom_fields[custom_field_name | default('dns_zone')].name}}) }}"
       when: "(dns_records | community.general.json_query('[*].tenant') | list | length == dns_records | length)
          and not (dns_records | community.general.json_query('[*].dns_zone') | list | length == dns_records | length)"
 
@@ -44,8 +53,7 @@
           tenant: "{{ item.tenant | default(omit) }}"
       loop: "{{ mapped_records }}"
 
-    - name: Leave artifacts
+    - name: Leave artifacts for a playbook that commits these changes to DNS server
       ansible.builtin.set_stats:
         data:
           __dns_records: "{{ mapped_records }}"
-
