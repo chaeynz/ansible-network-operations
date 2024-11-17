@@ -14,7 +14,3 @@ group_by:
   - device_roles
   - platforms
   - tags
-
-query_filters:
-  - has_primary_ip: "true"
-  - tenant: "{{ _tenant }}"
