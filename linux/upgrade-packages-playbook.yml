@@ -1,0 +1,25 @@
+---
+- name: Upgrade packages on hosts
+  hosts: "{{ _hosts | mandatory }}"
+  gather_facts: true
+  tasks:
+    - name: Upgrade all dnf packages
+      become: true
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest # noqa package-latest
+      when: ansible_facts['pkg_mgr'] == 'dnf'
+
+    - name: Update all apt packages
+      become: true
+      ansible.builtin.apt:
+        name: "*"
+        state: latest # noqa package-latest
+      when: ansible_facts['pkg_mgr'] == 'apt'
+
+    - name: Update all pacman packages
+      become: true
+      community.general.pacman:
+        name: "*"
+        state: latest
+      when: ansible_facts['pkg_mgr'] == 'pacman'
