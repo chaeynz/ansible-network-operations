@@ -1,5 +1,8 @@
 # Valid attributes for query_filters
 
+For custom_fields:
+- cf_mycustomfield
+
 - airflow
 - asset_tag
 - asset_tag__empty
