@@ -1,0 +1,19 @@
+---
+- name: Check DNS resolution
+  hosts: "{{ _hosts | mandatory }}"
+  tasks:
+    - name: Check DNS resolution using nslookup
+      shell: "nslookup google.com"
+      register: dns_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Fail the play if DNS resolution fails
+      fail:
+        msg: "DNS resolution failed on this host. Please check your DNS configuration."
+      when: dns_check.rc != 0
+
+    - name: Debug output of DNS check
+      debug:
+        var: dns_check.stdout
+      when: dns_check.rc == 0

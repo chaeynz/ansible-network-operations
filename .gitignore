@@ -1,4 +1,5 @@
 .vscode/
 venv/
 inventory.yml
+inventory.ini
 *.env

@@ -1,0 +1,40 @@
+---
+- name: Deploy the Ansible user on target hosts and add allowed SSH key
+  hosts: "{{ _hosts }}"
+  gather_facts: false
+  tasks:
+    - name: Determine the administrative group ('sudo' or 'wheel')
+      ansible.builtin.shell: |
+        if getent group sudo >/dev/null; then
+          echo sudo;
+        elif getent group wheel >/dev/null; then
+          echo wheel;
+        else
+          echo "none";
+        fi
+      register: admin_group_result
+      changed_when: false
+
+    - name: Fail if no administrative group is found
+      ansible.builtin.fail:
+        msg: "Neither 'sudo' nor 'wheel' group exists on the system."
+      when: admin_group_result.stdout == "none"
+
+    - name: Create user ansible and assign to admin group
+      ansible.builtin.user:
+        name: "{{ _name | default('ansible') }}"
+        comment: "{{ _comment | default('Automation User') }}"
+        uid: "{{ _uid | default('1001') }}"
+        groups: "{{ admin_group_result.stdout }}"
+        password: "{{ _password | default(omit) }}"
+        state: "{{ _state | default('present') }}"
+      become: true
+
+    - name: Add SSH public key to ansible user's authorized_keys
+      ansible.builtin.authorized_key:
+        user: "{{ _name | default('ansible') }}"
+        state: present
+        key: "{{ ssh_key }}"
+      become: true
+      when: ssh_key is defined
+

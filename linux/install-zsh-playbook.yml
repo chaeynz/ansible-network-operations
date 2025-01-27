@@ -1,0 +1,104 @@
+---
+  - name: Install ZSH
+    hosts: "{{ _hosts | mandatory }}"
+    gather_facts: true
+    tasks:
+      - name: Check if OMZ is installed
+        ansible.builtin.stat:
+          path: "/home/{{ ansible_facts['user_id'] }}/.oh-my-zsh"
+        register: omz_check
+
+      - name: Install reqs via pacman if pacman
+        community.general.pacman:
+          name:
+            - git
+            - zsh
+        when: omz_check.stat.exists is false and ansible_facts['pkg_mgr'] == 'pacman'
+
+      - name: Install reqs via package if else
+        become: true
+        ansible.builtin.package:
+          name:
+            - git
+            - zsh
+        when: omz_check.stat.exists is false and ansible_facts['pkg_mgr'] != 'pacman'
+
+      - name: Install Oh-my-zsh
+        ansible.builtin.shell: |
+          sh -c "$(wget -O- https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+        environment:
+          CHSH: "no"
+          RUNZSH: "no"
+        register: omz_output
+        changed_when: true
+        when: omz_check.stat.exists is false
+
+      - name: Debug
+        ansible.builtin.debug:
+          var: omz_output
+        when: omz_check.stat.exists is false
+
+      - name: List directories under /home
+        ansible.builtin.find:
+          path: /home
+          file_type: directory
+          recurse: false
+        register: home_dirs
+
+      - name: Replace variable
+        ansible.builtin.set_fact:
+          usernames: "{{ (home_dirs.files | map(attribute='path')) | map('regex_replace', '^/home/', '') | list }}"
+
+      # which zsh
+
+      - name: Set Shell for user
+        ansible.builtin.user:
+          name: "{{ item }}"
+          shell: "/usr/bin/zsh" # which zsh
+        become: true
+        with_items: "{{ usernames | reject('equalto', 'ansible') | list }}"
+
+      - name: Check if plugin zsh-autosuggestions installed
+        ansible.builtin.stat:
+          path: "/home/{{ ansible_facts['user_id'] }}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
+        register: zsh_autosuggest_plugin_check
+
+      - name: Install zsh-autosuggestions for Oh-my-zsh
+        ansible.builtin.git:
+          repo: "https://github.com/zsh-users/zsh-autosuggestions.git"
+          dest: "/home/{{ ansible_facts['user_id'] }}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
+          clone: true
+        when: zsh_autosuggest_plugin_check.stat.exists is false
+
+      - name: Check if plugin zsh-syntax-highlighting installed
+        ansible.builtin.stat:
+          path: "/home/{{ ansible_facts['user_id'] }}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
+        register: zsh_syntax_plugin_check
+
+      - name: Install zsh-syntax-highlighting for Oh-my-zsh
+        ansible.builtin.git:
+          repo: "https://github.com/zsh-users/zsh-syntax-highlighting.git"
+          dest: "/home/{{ ansible_facts['user_id'] }}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
+          clone: true
+        when: zsh_syntax_plugin_check.stat.exists is false
+
+      - name: Copy .zshrc from locally
+        become: true
+        ansible.builtin.copy:
+          src: "../configuration/.zshrc"
+          dest: "/home/{{ item }}/.zshrc"
+          remote_src: false
+          owner: "{{ item }}"
+          group: "{{ item }}"
+        with_items: "{{ usernames }}"
+
+      - name: Copy .oh-my-zsh to all users
+        become: true
+        ansible.builtin.copy:
+          src: "/home/{{ ansible_facts['user_id'] }}/.oh-my-zsh"
+          dest: "/home/{{ item }}/"
+          remote_src: true
+          owner: "{{ item }}"
+          group: "{{ item }}"
+        when: item != 'ansible'
+        with_items: "{{ usernames | reject('equalto', 'ansible') | list }}"
