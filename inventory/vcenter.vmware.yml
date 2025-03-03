@@ -1,0 +1,11 @@
+---
+plugin: vmware_vm_inventory
+# auth via environment variables VMWARE_HOST, VMWARE_USER, VMWARE_PASSWORD, VMWARE_VALIDATE_CERTS
+with_tags: true
+with_path: true
+properties: ["name", "config.cpuHotAddEnabled", "config.cpuHotRemoveEnabled", "config.instanceUuid", "config.hardware.numCPU", "config.template", "config.name", "config.uuid", "guest.hostName", "guest.ipAddress", "guest.guestId", "guest.guestState", "runtime.maxMemoryUsage", "customValue", "summary.runtime.powerState", "config.guestId", "config"]
+filters:
+- summary.runtime.powerState == "poweredOn"
+- not config.name.startswith("vCLS")
+- exclude_tag_name | default('ANSIBLE_DONT_TOUCH_ME') not in tags | default([])
+- tenant_name | default('vPulse') in tags | default([])
