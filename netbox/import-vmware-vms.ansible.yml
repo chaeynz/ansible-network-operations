@@ -3,13 +3,16 @@
 ---
 - name: Import VMware VMs into Netbox
   hosts: all
+  strategy: linear
   vars:
     credentials: &credentials
       netbox_url: "{{ lookup('ansible.builtin.env', 'NETBOX_API') }}"
       netbox_token: "{{ lookup('ansible.builtin.env', 'NETBOX_TOKEN') }}"
       validate_certs: "{{ _validate_certs | default(true) }}"
+    vcenter_tenant_tag_category: "{{ _vcenter_tenant_tag_category | default('Tenant') }}"
   tasks:
-    - ansible.builtin.setup:
+    - name: "Gather facts from hosts using builtin setup module"
+      ansible.builtin.setup:
         gather_subset:
           - network
           - os_family
@@ -19,6 +22,17 @@
     - name: Fail if hostnames mismatch
       when: inventory_hostname.split('_')[0] != ansible_fqdn
       ansible.builtin.fail:
+
+    - name: Ensure cluster exists
+      run_once: true
+      delegate_to: localhost
+      netbox.netbox.netbox_cluster:
+        <<: *credentials
+        data:
+          name: "{{ path.split('/')[1] }}"
+          cluster_type: "vCenter"
+        state: present
+
 
     - name: Add VM to Netbox
       delegate_to: localhost
@@ -30,7 +44,8 @@
           status: active
           vcpus: "{{ config.hardware.numCPU }}"
           memory: "{{ runtime.maxMemoryUsage }}"
-          serial: "{{ inventory_hostname | ansible.builtin.regex_replace(ansible_fqdn) }}"
+          serial: "{{ inventory_hostname | ansible.builtin.regex_replace(ansible_fqdn + '_') }}"
+          tenant: "{{ hostvars[inventory_hostname].get('tag_category', {}).get(vcenter_tenant_tag_category, []) | first | default(omit) }}"
           custom_fields:
             guest_os: "{{ config.guestId | upper }}"
         state: present
@@ -63,6 +78,7 @@
         <<: *credentials
         data:
           address: "{{ ansible_default_ipv4.address }}/{{ ansible_default_ipv4.prefix }}"
+          tenant: "{{ hostvars[inventory_hostname].get('tag_category', {}).get(vcenter_tenant_tag_category, []) | first | default(omit) }}"
           assigned_object:
             name: "{{ ansible_default_ipv4.interface }}"
             virtual_machine: "{{ ansible_fqdn }}"
