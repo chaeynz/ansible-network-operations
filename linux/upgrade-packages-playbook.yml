@@ -20,6 +20,6 @@
     - name: Update all pacman packages
       become: true
       community.general.pacman:
-        name: "*"
-        state: latest
+        update_cache: true
+        upgrade: true
       when: ansible_facts['pkg_mgr'] == 'pacman'
