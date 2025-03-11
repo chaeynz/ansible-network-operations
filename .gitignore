@@ -5,3 +5,4 @@ inventory.ini
 *.env
 
 __pycache__/
+.ansible/
