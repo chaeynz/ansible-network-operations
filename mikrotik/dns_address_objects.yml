@@ -1,0 +1,9 @@
+---
+address_objects:
+  - apt.postgresql.org
+  - de.pool.ntp.org
+  - mirrors.rockylinux.org
+  - packagecloud.io
+  - hub.docker.com
+  - checkip.amazonaws.com
+  - 
