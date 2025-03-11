@@ -1,4 +1,4 @@
-# Valid attributes for query_filters
+# Valid attributes for Netbox Inventory query_filters
 
 For custom_fields:
 - cf_mycustomfield

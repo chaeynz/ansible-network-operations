@@ -1,0 +1,5 @@
+---
+plugin: community.general.nmap
+sudo: true
+strict: false
+address: "{{ subnet }}"
