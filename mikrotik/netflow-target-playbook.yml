@@ -1,0 +1,29 @@
+---
+- name: Add a new netflow target on MikroTik
+  vars:
+    credentials: &credentials
+      hostname: "{{ ansible_host }}"
+      username: "{{ ansible_user }}"
+      password: "{{ ansible_password }}"
+      tls: true
+      validate_certs: false
+  hosts: "{{ _hosts }}"
+  gather_facts: false
+  tasks:
+    - name: Make sure Netflow is enabled
+      community.routeros.api_modify:
+        <<: *credentials
+        path: ip traffic-flow
+        data:
+          - enabled: yes
+
+    - name: Add the new target
+      community.routeros.api_modify:
+        <<: *credentials
+        path: ip traffic-flow target
+        data:
+          - dst-address: "{{ target_ip_address }}"
+            port: "{{ target_port | default('2055') }}"
+            version: "{{ netflow_version | default(omit) }}"
+        handle_absent_entries: remove
+        handle_entries_content: remove
