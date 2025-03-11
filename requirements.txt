@@ -1,8 +1,10 @@
 pytz
-vsphere-automation-sdk @ git+https://github.com/vmware/vsphere-automation-sdk-python.git@145786b88fec3c0f59335d7dd683c1017a1fe626
+vsphere-automation-sdk @ git+https://github.com/vmware/vsphere-automation-sdk-python.git
 ansible
 ansible-lint
 pynetbox
 python-dotenv
 pyvmomi==8.0.3.0.1
 netaddr
+xmltodict
+jmespath
