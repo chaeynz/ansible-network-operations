@@ -1,0 +1,13 @@
+---
+- name: Test the connection
+  hosts: "{{ _hosts | mandatory }}"
+  strategy: free
+  tasks:
+    - name: Test ping
+      ansible.builtin.ping:
+
+    - name: Test become
+      ansible.builtin.command:
+        cmd: whoami
+      become: true
+      changed_when: false
