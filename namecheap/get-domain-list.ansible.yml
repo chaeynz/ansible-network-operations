@@ -1,0 +1,9 @@
+---
+- name: Ansible Playbook
+  hosts: localhost
+  vars:
+  tasks:
+    - name: Get list of domains
+      register: response
+      debug:
+        msg: "{{ lookup('chaeynz.namecheap.nc_lookup', ...) }}"

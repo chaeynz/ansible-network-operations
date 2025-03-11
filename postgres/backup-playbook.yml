@@ -1,0 +1,12 @@
+---
+- name: "Backup database"
+  hosts: "{{ _hosts | default(omit) }}"
+  gather_facts: true # Required for ansible_date_time
+  tasks:
+    - name: "Back up the database"
+      community.postgresql.postgresql_db:
+        state: dump
+        name: "{{ db_name }}"
+        target: "/backup/{{ app_name }}/{{ ansible_date_time.iso8601 }}/{{ db_name }}.dump.gz"
+      become: true
+      become_user: postgres
