@@ -1,0 +1,8 @@
+---
+- name: Deploy a template on vCenter
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Move VM
+      community.vmware.vmware_guest_move:
