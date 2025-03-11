@@ -1,0 +1,7 @@
+---
+- name: Reboot all machines
+  hosts: "{{ _hosts | mandatory }}"
+  tasks:
+    - name: Reboot host
+      become: true
+      ansible.builtin.reboot:
