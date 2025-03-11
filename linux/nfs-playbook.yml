@@ -1,12 +1,13 @@
 # Takes extra-vars:
-# - nfs_server
 # - nfs_share
 # - mount_point
 ---
 - name: Mount an NFS share
-  hosts: "{{ _hosts | default('localhost') }}"
+  hosts: "{{ _hosts | mandatory }}"
   become: true
   gather_facts: true
+  vars:
+    mount_point: "{{ nfs_share | ansible.builtin.regex_search('(/mnt/[^ ]+)') }}"
   tasks:
     - name: Install NFS utilities
       ansible.builtin.yum:
@@ -28,21 +29,21 @@
 
     - name: Create the mount point directory
       ansible.builtin.file:
-        path: "{{ mount_point }}"
+        path: "{{ mount_point | mandatory }}"
         state: directory
       become: true
 
     - name: Mount the NFS share
       ansible.posix.mount:
         path: "{{ mount_point }}"
-        src: "{{ nfs_server }}:{{ nfs_share }}"
+        src: "{{ nfs_share }}"
         fstype: nfs
         state: mounted
 
     - name: Ensure the NFS share is mounted on boot
       ansible.posix.mount:
         path: "{{ mount_point }}"
-        src: "{{ nfs_server }}:{{ nfs_share }}"
+        src: "{{ nfs_share | mandatory }}"
         fstype: nfs
         opts: "defaults,noauto,nofail,x-systemd.automount,soft,timeo=10"
         state: present
