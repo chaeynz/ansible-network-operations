@@ -1,0 +1,22 @@
+---
+- name: Creates the user on the IPA server
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Ensure user is present and always reset password
+      community.general.ipa_user:
+        state: "{{ _state | default('present') }}"
+        validate_certs: false
+        name: "{{ _name | mandatory }}"
+        password: "{{ _password | default(omit) }}"
+        update_password: "{{ _update_password | default('on_create') }}"
+        userauthtype:
+          - "password"
+        krbpasswordexpiration: "{{ expires | default(omit) }}"
+        givenname: "{{ _name }}"
+        sn: "{{ surename | default('none') }}"
+        mail:
+          - "{{ _mail | default(None) }}"
+        uidnumber: "{{ uidnumber | default(omit) }}"
+        gidnumber: "{{ gidnumber | default(omit) }}"
+        homedirectory: "/home/{{ _name }}"
