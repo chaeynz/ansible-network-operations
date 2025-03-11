@@ -1,0 +1,40 @@
+---
+- name: Ansible Playbook
+  hosts: router
+  vars:
+    con: &connect
+      hostname: "{{ ansible_host }}"
+      username: "{{ ansible_user }}"
+      password: "{{ lookup('ansible.builtin.env', 'MIKROTIK_PASS') }}"
+      tls: true
+      validate_certs: false
+    devices:
+      - name: "device"
+        security_rules:
+          - name:
+
+  tasks:
+    - name: Get system hostname
+      community.routeros.api_facts:
+        <<: *connect
+        gather_subset: default
+        register: device_facts
+
+    - name: Collect all security rules from the device
+      community.routeros.api_info:
+        <<: *connect
+        path: ip firewall filter
+        include_read_only: true
+        unfiltered: true
+      delegate_to: localhost
+      register: security_rules
+
+    - ansible.builtin.set_fact:
+        devices: >-
+          {%- set result = [] -%}
+          {%- for rule in security_rules -%}
+            {%- _ = devices.append({ "name": "{{ device_facts['ansible_net_hostname'] }}", "rules": [
+            ]}) -%}
+          {%- endfor -%}
+
+
