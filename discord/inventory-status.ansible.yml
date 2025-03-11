@@ -1,0 +1,27 @@
+---
+- name: Send discord webhook
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    credentials: &credentials
+      webhook_id: "{{ lookup('ansible.builtin.env', 'WEBHOOK_ID') }}"
+      webhook_token: "{{ lookup('ansible.builtin.env', 'WEBHOOK_TOKEN') }}"
+      username: "{{ _username | default(lookup('ansible.builtin.env', 'WEBHOOK_USERNAME')) }}"
+      avatar_url: "{{ _avatar_url | default(lookup('ansible.builtin.env', 'AVATAR_URL')) }}"
+  tasks:
+    - name: Fail if username empty
+      ansible.builtin.fail:
+        msg: "_username is undefined. Either use the environment variable WEBHOOK_USERNAME or pass _username to extravars"
+      when: credentials.username == ""
+
+    - name: Send a message to the Discord channel using the credentials
+      community.general.discord:
+        <<: *credentials
+        content: >-
+          Todays inventory:
+
+          {% for host in groups['all'] %}
+            {%- set line = '**' + host + '**\n' | replace('\\n', '\n') -%}
+            * {{ line }}
+          {%- endfor -%}
