@@ -3,3 +3,5 @@ venv/
 inventory.yml
 inventory.ini
 *.env
+
+__pycache__/
