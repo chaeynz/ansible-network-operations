@@ -1,6 +1,6 @@
 ---
 - name: Deploy the Ansible user on target hosts and add allowed SSH key
-  hosts: "{{ _hosts }}"
+  hosts: "{{ _hosts | default('linux') }}"
   gather_facts: false
   tasks:
     - name: Determine the administrative group ('sudo' or 'wheel')
@@ -37,4 +37,3 @@
         key: "{{ ssh_key }}"
       become: true
       when: ssh_key is defined
-
