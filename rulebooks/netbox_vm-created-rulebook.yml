@@ -10,7 +10,7 @@
         event.payload.username != "ansible" and
         event.payload.data.tenant != none and
         (
-          event.payload.data.primary_ip4 != none or
+          event.payload.data.primary_ip4 != none and
           event.payload.data.primary_ip6 == none
         )
       action:
@@ -30,7 +30,7 @@
         event.payload.username != "ansible" and
         event.payload.data.tenant != none and
         (
-          event.payload.data.primary_ip4 == none or
+          event.payload.data.primary_ip4 == none and
           event.payload.data.primary_ip6 != none
         )
       action:
