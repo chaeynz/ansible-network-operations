@@ -1,0 +1,9 @@
+---
+- name: Ansible Playbook
+  hosts: storage
+  tasks:
+    - name: Gather TrueNAS-specific facts
+      arensb.truenas.truenas_facts:
+
+    - ansible.builtin.debug:
+        var: ansible_facts
