@@ -1,0 +1,116 @@
+---
+- name: Deploy VLANs from Netbox to MikroTik
+  hosts: routeros:&access_switch
+  strategy: free
+  vars:
+    credentials: &credentials
+      hostname: "{{ ansible_host }}"
+      username: "{{ lookup('ansible.builtin.env', 'ANSIBLE_USER') }}"
+      password: "{{ lookup('ansible.builtin.env', 'ANSIBLE_PASSWORD') }}"
+
+  tasks:
+    - name: Ensure that bridge exists
+      delegate_to: localhost
+      community.routeros.api_modify:
+        <<: *credentials
+        path: interface bridge
+        handle_absent_entries: remove
+        handle_entries_content: remove_as_much_as_possible
+        ensure_order: true
+        data: >-
+          {%- set result = [] -%}
+          {%- for interface in interfaces | selectattr('type.value', 'eq', 'bridge') -%}
+            {%- set _ = result.append(
+              {
+                'name': interface.name,
+                'mtu': interface.mtu or 9000,
+                'vlan-filtering': true,
+                'dhcp-snooping': true
+              }
+            ) -%}
+          {%- endfor -%}
+          {{ result }}
+
+    - name: Add ports to bridge
+      delegate_to: localhost
+      community.routeros.api_modify:
+        <<: *credentials
+        path: interface bridge port
+        handle_absent_entries: remove
+        handle_entries_content: remove_as_much_as_possible
+        ensure_order: true
+        data: >-
+          {%- set result = [] -%}
+          {%- for bridge_if in interfaces | selectattr('type.value', 'eq', 'bridge') -%}
+            {%- set bridge_ports = interfaces
+              | selectattr('bridge', '!=', none)
+              | list
+              | selectattr('bridge.name', 'eq', bridge_if.name)
+              | list
+              | community.general.json_query('[].name')
+            -%}
+            {%- set _ = result.append(
+              {
+                'interface': bridge_ports | join(','),
+                'bridge': bridge_if.name
+              }
+            ) -%}
+          {%- endfor -%}
+          {{ result }}
+
+
+    - name: Create VLAN
+      delegate_to: localhost
+      community.routeros.api_modify:
+        <<: *credentials
+        path: interface bridge vlan
+        handle_absent_entries: remove
+        handle_entries_content: remove_as_much_as_possible
+        ensure_order: true
+        data: >-
+          {%- set result = [] -%}
+          {%- for vlan in interfaces | community.general.json_query('[].tagged_vlans[].vid') | list | union(interfaces | community.general.json_query('[].untagged_vlan[].vid')) | unique -%}
+            {%- for bridge in interfaces | selectattr('type.value', 'eq', 'bridge') -%}
+              {%- set tagged_interfaces = interfaces
+                | selectattr('type.value', '!=', 'virtual')
+                | selectattr('tagged_vlans', '!=', none)
+                | selectattr('tagged_vlans', 'search', 'vid.: ' + vlan | string )
+                | community.general.json_query('[].name')
+              -%}
+              {%- set untagged_interfaces = interfaces
+                | selectattr('type.value', '!=', 'virtual')
+                | selectattr('untagged_vlan', '!=', none)
+                | selectattr('untagged_vlan.vid', 'eq', vlan | int)
+                | community.general.json_query('[].name')
+              -%}
+              {%- set _ = result.append(
+                {
+                  'bridge': bridge.name,
+                  'vlan-ids': vlan,
+                  'tagged': tagged_interfaces | join(','),
+                  'untagged': untagged_interfaces | join(',')
+                }
+              ) -%}
+            {%- endfor -%}
+          {%- endfor -%}
+          {{ result }}
+
+    - name: Create SVIs
+      community.routeros.api_modify:
+        <<: *credentials
+        path: interface vlan
+        handle_absent_entries: remove
+        handle_entries_content: remove_as_much_as_possible
+        ensure_order: true
+        data: >-
+          {%- set result = [] -%}
+          {%- for interface in interfaces | selectattr('type.value', 'eq', 'virtual') | selectattr('untagged_vlan', '!=', none) -%}
+            {%- set _ = result.append(
+              {
+                'name': interface.name,
+                'vlan-id': interface.untagged_vlan.vid,
+                'interface': interface.parent.name
+              }
+            ) -%}
+          {%- endfor -%}
+          {{ result }}
