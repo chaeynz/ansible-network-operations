@@ -109,7 +109,8 @@
               {
                 'name': interface.name,
                 'vlan-id': interface.untagged_vlan.vid,
-                'interface': interface.parent.name
+                'interface': interface.parent.name,
+                'mtu': interface.mtu or 1500
               }
             ) -%}
           {%- endfor -%}
