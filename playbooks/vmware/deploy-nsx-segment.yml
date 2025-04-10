@@ -1,0 +1,50 @@
+---
+- name: VMware NSX Segment
+  hosts: localhost
+  vars:
+    credentials: &credentials
+      hostname: "{{ lookup('ansible.builtin.env', 'NSX_HOST', default=omit) }}"
+      username: "{{ lookup('ansible.builtin.env', 'NSX_USER', default=omit) }}"
+      password: "{{ lookup('ansible.builtin.env', 'NSX_PASSWORD', default=omit) }}"
+      validate_certs: "{{ lookup('ansible.builtin.env', 'NSX_VALIDATE_CERTS', default=omit) }}"
+    netbox_nsx_tag_name: "nsx-resource"
+  tasks:
+    - name: Query NSX segments from Netbox
+      ansible.builtin.set_fact:
+        netbox_prefixes: "{{ lookup('netbox.netbox.nb_lookup', 'prefixes', api_filter='tag=' + netbox_nsx_tag_name) }}"
+
+    - name: Ensure response is in list
+      ansible.builtin.set_fact:
+        netbox_prefixes: "{{ netbox_prefixes if netbox_prefixes is sequence and netbox_prefixes is not mapping else [netbox_prefixes] }}"
+
+    - name: Modify NSX segment
+      loop: "{{ netbox_prefixes | rejectattr('value.description', 'eq', '') }}"
+      loop_control:
+        label: "{{ item.value.prefix }}"
+      vmware.ansible_for_nsxt.nsxt_policy_segment:
+        <<: *credentials
+        state: present
+        display_name: "{{ item.value.description }}"
+        tier0_display_name: "{{ item.value.custom_fields.nsx_segment_attached_tier0 }}"
+        transport_zone_display_name: "{{ item.value.custom_fields.nsx_segment_transport_zone }}"
+        subnets:
+          - gateway_address: "{{ item.value.prefix | ansible.utils.ipaddr('last_usable') }}/{{ item.value.prefix | ansible.utils.ipaddr('prefix') }}"
+        vlan_ids: "{{ item.value.custom_fields.nsx_segment_vlan if item.value.custom_fields.nsx_segment_vlan != none else omit }}"
+
+    - name: Notify about missing descriptions
+      when: netbox_prefixes | selectattr('value.description', 'eq', '') | map(attribute='value.prefix') != []
+      ansible.builtin.debug:
+        msg: "The following prefixes don't have a description and therefore won't be deployed to NSX: {{ netbox_prefixes | selectattr('value.description', 'eq', '') | map(attribute='value.prefix') }}"
+
+    - name: Create IP address within NetBox for the NSX gateway
+      loop: "{{ netbox_prefixes | rejectattr('value.description', 'eq', '') }}"
+      loop_control:
+        label: "{{ item.value.prefix }}"
+      netbox.netbox.netbox_ip_address:
+        netbox_url: "{{ lookup('ansible.builtin.env', 'NETBOX_API', default=omit) }}"
+        netbox_token: "{{ lookup('ansible.builtin.env', 'NETBOX_TOKEN', default=omit) }}"
+        data:
+          address: "{{ item.value.prefix | ansible.utils.ipaddr('last_usable') }}/{{ item.value.prefix | ansible.utils.ipaddr('prefix') }}"
+          description: "Address of NSX Gateway '{{ item.value.custom_fields.nsx_segment_attached_tier0 }}' for {{ item.value.description }}"
+          tags: "{{ netbox_nsx_tag_name }}"
+        state: present
