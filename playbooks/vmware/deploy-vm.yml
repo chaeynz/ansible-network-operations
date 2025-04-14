@@ -1,0 +1,160 @@
+---
+- name: Deploy a virtual machine in vCenter
+  hosts: localhost
+  vars:
+    credentials: &credentials
+      netbox_url: "{{ lookup('ansible.builtin.env', 'NETBOX_API', default=omit) }}"
+      netbox_token: "{{ lookup('ansible.builtin.env', 'NETBOX_TOKEN', default=omit) }}"
+  tasks:
+    - name: Get Tenant domain
+      when: domain is not defined and tenant is defined
+      ansible.builtin.set_fact:
+        domain: "{{ lookup('netbox.netbox.nb_lookup', 'tenants', api_filter='name=' ~tenant, raw_data=true).custom_fields.dns_zone.name }}"
+
+    - name: Set VM folder
+      when: vm_folder is not defined
+      ansible.builtin.set_fact:
+        vm_folder: "{{ domain | community.dns.get_registrable_domain }}/{{ subfolder }}"
+
+    - name: Get DNS servers from NetBox
+      loop: >-
+        {{
+          lookup('netbox.netbox.nb_lookup', 'zones',
+            plugin='netbox-dns',
+            api_filter='name=' ~ domain,
+            raw_data=true
+          ).nameservers | map(attribute='name')
+        }}
+      ansible.builtin.set_fact:
+        dns_servers: >-
+          {{
+            (dns_servers | default([])) + [
+              lookup('netbox.netbox.nb_lookup', 'records',
+                plugin='netbox-dns',
+                api_filter='name=' ~ item.split('.')[:1] | join('.') ~
+                            ' zone=' ~ item.split('.')[1:] | join('.') ~
+                            ' type=A',
+                raw_data=true
+              ).value | default(false)
+            ]
+            | reject('equalto', false) | list
+          }}
+
+    - debug: var=dns_servers
+
+    - name: Get Netbox prefix details
+      ansible.builtin.set_fact:
+        nb_prefix: "{{ lookup('netbox.netbox.nb_lookup', 'prefixes', api_filter='prefix=' ~prefix, raw_data=true) }}"
+
+    - debug: var=nb_prefix
+
+    - name: Ensure VM is in netbox and set status to staged
+      netbox.netbox.netbox_virtual_machine:
+        <<: *credentials
+        data:
+          name: "{{ vm_name }}"
+          cluster: "{{ cluster }}"
+          tenant: "{{ tenant | default(omit) or omit }}"
+          vcpus: "{{ vcpus | default(omit) or omit }}"
+          memory: "{{ memory | default(omit) or omit }}"
+          status: staged
+          custom_fields:
+            vm_prefix:
+              id: "{{ nb_prefix.id }}"
+        state: present
+
+    - name: Add interface to vm in NetBox
+      register: nb_interface
+      netbox.netbox.netbox_vm_interface:
+        <<: *credentials
+        data:
+          name: "eth0"
+          virtual_machine: "{{ vm_name }}"
+        state: present
+
+    - debug: var=nb_interface
+
+    - name: Get IP address from NetBox
+      when: ip_address is not defined
+      register: nb_ip_address
+      netbox.netbox.netbox_ip_address:
+        <<: *credentials
+        data:
+          prefix: "{{ prefix }}"
+          assigned_object:
+            name: "eth0"
+            virtual_machine: "{{ vm_name }}"
+        state: present
+
+    - name: Set ip address
+      when: ip_address is not defined
+      ansible.builtin.set_fact:
+        ip_address: "{{ nb_ip_address.ip_address.address if ip_address is not defined }}"
+
+    - name: Set primary IP for vm
+      netbox.netbox.netbox_virtual_machine:
+        <<: *credentials
+        data:
+          name: "{{ vm_name }}"
+          cluster: "{{ cluster }}"
+          primary_ip4: "{{ ip_address }}"
+
+    - name: Get name of datacenter from NetBox
+      when: datacenter is not defined and cluster is defined
+      ansible.builtin.set_fact:
+        datacenter: "{{ lookup('netbox.netbox.nb_lookup', 'clusters', api_filter='name=' ~cluster, raw_data=true).group.name | default(omit) }}"
+
+  ## Could also use nb_prefix.vlan.name, but lets use this data for now
+    - name: Get DVS portgroup
+      when: nb_prefix.vlan is not none
+      register: dvs_portgroups
+      community.vmware.vmware_dvs_portgroup_find:
+        vlanid: "{{ nb_prefix.vlan.vid }}"
+
+    - name: Define network
+      ansible.builtin.set_fact:
+        network: >-
+          {%- if dvs_portgroup is defined -%}
+            {%- set result = (dvs_portgroups.dvs_portgroups | rejectattr('name', 'search', '-DVUplinks-') | first).name -%}
+          {%- elif 'nsx-resource' in nb_prefix.tags | map(attribute='name') -%}
+            {%- set result = nb_prefix.description -%}
+          {%- else -%}
+            {%- set result = omit -%}
+          {%- endif -%}
+          {{ result }}
+
+    - name: Clone from template and configure customization
+      community.vmware.vmware_guest:
+        template: "{{ template_name }}"
+        linked_clone: false
+        folder: "{{ vm_folder }}"
+        name: "{{ vm_name }}"
+        cluster: "{{ cluster }}"
+        datacenter: "{{ datacenter }}"
+        hardware:
+          memory_mb: "{{ memory | default(omit) or omit }}"
+          num_cpu_cores_per_socket: "{{ vcpus | default(omit) or omit }}"
+          num_cpus: 1
+          secure_boot: "{{ omit }}"
+          hotadd_cpu: true
+          hotadd_memory: true
+        networks:
+          - start_connected: true
+            name: "{{ network }}"
+            ip: "{{ ip_address | ansible.utils.ipaddr('host') }}"
+            netmask: "{{ ip_address | ansible.utils.ipaddr('netmask') }}"
+            gateway: "{{ prefix | ansible.utils.ipaddr('last_usable') }}"
+        customization:
+          dns_servers: "{{ dns_servers | default(omit) }}"
+          domain: "{{ domain }}"
+          hostname: "{{ vm_name }}"
+        wait_for_customization: true
+        wait_for_ip_address: true
+
+    - name: Set primary IP for vm
+      netbox.netbox.netbox_virtual_machine:
+        <<: *credentials
+        data:
+          name: "{{ vm_name }}"
+          cluster: "{{ cluster }}"
+          status: active
