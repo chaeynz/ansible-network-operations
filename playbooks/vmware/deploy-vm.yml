@@ -136,6 +136,9 @@
           {%- endif -%}
           {{ result }}
 
+    - debug:
+        msg: "{{ ip_address | ansible.utils.ipaddr('address') }}"
+
     - name: Clone from template and configure customization
       community.vmware.vmware_guest:
         template: "{{ vm_template }}"
@@ -154,7 +157,7 @@
         networks:
           - start_connected: true
             name: "{{ network }}"
-            ip: "{{ ip_address | ansible.utils.ipaddr('host') }}"
+            ip: "{{ ip_address | ansible.utils.ipaddr('address') }}"
             netmask: "{{ ip_address | ansible.utils.ipaddr('netmask') }}"
             gateway: "{{ prefix | ansible.utils.ipaddr('last_usable') }}"
         customization:
