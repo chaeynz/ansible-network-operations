@@ -1,0 +1,53 @@
+---
+- name: Listen for netbox events on a webhook
+  hosts: all
+  sources:
+    - ansible.eda.webhook:
+        port: "{{ webhook_port | default(5000) }}"
+
+  rules:
+
+  ## DNS
+    - name: Netbox | Create A and AAAA record
+      condition: |
+        event.payload.username != "ansible" and
+        event.payload.model == "record"
+      action:
+        run_workflow_template:
+          name: "Netbox|DNS record"
+          organization: Default
+          job_args:
+            extra_vars:
+              dns_records:
+                - dns_name: event.payload.data.name
+                  dns_zone: event.payload.data.zone.name
+                  dns_value: event.payload.data.value
+                  dns_type: event.payload.data.type
+
+  ## Virtual Machine created
+    - name: E/netbox/virtualmachine/create
+      condition: |
+        event.payload.username != "ansible" and
+        event.payload.model == "virtualmachine" and
+        event.payload.event == "created" and
+        event.payload.data.status.value == "active"
+      action:
+        run_workflow_template:
+          name: E/netbox/virtualmachine/create
+          organization: Default
+          job_args:
+            extra_vars:
+              vm_name: event.payload.data.name
+              cluster: event.payload.data.cluster.name
+              template_name: event.payload.data.custom_fields.vm_template
+              tenant: event.payload.data.tenant.name
+              prefix: event.payload.data.custom_fields.vm_prefix
+              vcpus: event.payload.data.vcpus
+              memory: event.payload.data.memory
+              subfolder: event.payload.data.custom_fields.machine_service_category
+
+  ## Catch all other events and log them
+    - name: Debug
+      condition: event.payload is defined
+      action:
+        debug:
