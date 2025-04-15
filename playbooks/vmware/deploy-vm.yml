@@ -7,12 +7,17 @@
       netbox_token: "{{ lookup('ansible.builtin.env', 'NETBOX_TOKEN', default=omit) }}"
   tasks:
     ## FIXME: Handle None value from template_name in if statement
-    - name: Get template_name
+    - name: Set vm_template from platform
       when: platform is defined
       ansible.builtin.set_fact:
-        template_name: "{{ lookup('netbox.netbox.nb_lookup', 'platforms', api_filter='name=\"' ~platform ~'\"', raw_data=true).custom_fields.vm_template }}"
+        vm_template: "{{ lookup('netbox.netbox.nb_lookup', 'platforms', api_filter='name=\"' ~platform ~'\"', raw_data=true).custom_fields.vm_template }}"
 
-    - debug: var=template_name
+    - name: Set from template_name
+      when: platform is not defined and template_name is not none
+      ansible.builtin.set_fact:
+        vm_template: "{{ template_name }}"
+
+    - debug: var=vm_template
 
     - name: Get Tenant domain
       when: domain is not defined and tenant is defined
@@ -133,7 +138,7 @@
 
     - name: Clone from template and configure customization
       community.vmware.vmware_guest:
-        template: "{{ template_name }}"
+        template: "{{ vm_template }}"
         linked_clone: false
         folder: "{{ vm_folder }}"
         name: "{{ vm_name }}"
