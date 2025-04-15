@@ -45,7 +45,7 @@
               vcpus: "{{ event.payload.data.vcpus }}"
               memory: "{{ event.payload.data.memory }}"
               subfolder: "{{ event.payload.data.custom_fields.machine_service_category }}"
-              platform: "{{ event.payload.data.platform }}"
+              platform: "{{ event.payload.data.platform.name }}"
 
   ## Catch all other events and log them
     - name: Debug
