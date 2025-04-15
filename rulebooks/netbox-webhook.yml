@@ -39,7 +39,7 @@
             extra_vars:
               vm_name: "{{ event.payload.data.name }}"
               cluster: "{{ event.payload.data.cluster.name }}"
-              template_name: "{{ event.payload.data.custom_fields.vm_template }}"
+              template_name: "{{ event.payload.data.custom_fields.vm_template | default('') }}"
               tenant: "{{ event.payload.data.tenant.name }}"
               prefix: "{{ event.payload.data.custom_fields.vm_prefix.prefix }}"
               vcpus: "{{ event.payload.data.vcpus }}"
