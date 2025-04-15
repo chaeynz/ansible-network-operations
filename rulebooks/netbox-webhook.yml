@@ -41,7 +41,7 @@
               cluster: "{{ event.payload.data.cluster.name }}"
               template_name: "{{ event.payload.data.custom_fields.vm_template }}"
               tenant: "{{ event.payload.data.tenant.name }}"
-              prefix: "{{ event.payload.data.custom_fields.vm_prefix }}"
+              prefix: "{{ event.payload.data.custom_fields.vm_prefix.prefix }}"
               vcpus: "{{ event.payload.data.vcpus }}"
               memory: "{{ event.payload.data.memory }}"
               subfolder: "{{ event.payload.data.custom_fields.machine_service_category }}"
