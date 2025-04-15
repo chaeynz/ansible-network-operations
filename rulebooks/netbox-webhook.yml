@@ -37,14 +37,14 @@
           organization: Default
           job_args:
             extra_vars:
-              vm_name: event.payload.data.name
-              cluster: event.payload.data.cluster.name
-              template_name: event.payload.data.custom_fields.vm_template
-              tenant: event.payload.data.tenant.name
-              prefix: event.payload.data.custom_fields.vm_prefix
-              vcpus: event.payload.data.vcpus
-              memory: event.payload.data.memory
-              subfolder: event.payload.data.custom_fields.machine_service_category
+              vm_name: "{{ event.payload.data.name }}"
+              cluster: "{{ event.payload.data.cluster.name }}"
+              template_name: "{{ event.payload.data.custom_fields.vm_template }}"
+              tenant: "{{ event.payload.data.tenant.name }}"
+              prefix: "{{ event.payload.data.custom_fields.vm_prefix }}"
+              vcpus: "{{ event.payload.data.vcpus }}"
+              memory: "{{ event.payload.data.memory }}"
+              subfolder: "{{ event.payload.data.custom_fields.machine_service_category }}"
 
   ## Catch all other events and log them
     - name: Debug
