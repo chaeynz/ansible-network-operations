@@ -6,6 +6,13 @@
       netbox_url: "{{ lookup('ansible.builtin.env', 'NETBOX_API', default=omit) }}"
       netbox_token: "{{ lookup('ansible.builtin.env', 'NETBOX_TOKEN', default=omit) }}"
   tasks:
+    - name: Get template_name
+      when: template_name is undefined or template_name is none and platform is defined
+      ansible.builtin.set_fact:
+        template_name: "{{ lookup('netbox.netbox.nb_lookup', 'platforms', api_filter='name=\"' ~platform ~'\"', raw_data=true).custom_fields.vm_template }}"
+
+    - debug: var=template_name
+
     - name: Get Tenant domain
       when: domain is not defined and tenant is defined
       ansible.builtin.set_fact:
@@ -151,7 +158,7 @@
         wait_for_customization: true
         wait_for_ip_address: true
 
-    - name: Set primary IP for vm
+    - name: Set VM status active in NetBox
       netbox.netbox.netbox_virtual_machine:
         <<: *credentials
         data:
