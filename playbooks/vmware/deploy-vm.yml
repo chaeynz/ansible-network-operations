@@ -6,8 +6,9 @@
       netbox_url: "{{ lookup('ansible.builtin.env', 'NETBOX_API', default=omit) }}"
       netbox_token: "{{ lookup('ansible.builtin.env', 'NETBOX_TOKEN', default=omit) }}"
   tasks:
+    ## FIXME: Handle None value from template_name in if statement
     - name: Get template_name
-      when: template_name is undefined or template_name is none and platform is defined
+      when: platform is defined
       ansible.builtin.set_fact:
         template_name: "{{ lookup('netbox.netbox.nb_lookup', 'platforms', api_filter='name=\"' ~platform ~'\"', raw_data=true).custom_fields.vm_template }}"
 
