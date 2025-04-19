@@ -8,8 +8,8 @@
       community.general.ipa_dnsrecord:
         validate_certs: false
         state: "{{ _state | default('present') }}"
-        zone_name: "{{ item.dns_zone }}"
-        record_name: "{{ item.dns_name }}"
-        record_type: "{{ item.dns_type }}"
-        record_value: "{{ item.dns_value | ansible.utils.ipaddr('address') }}"
-      loop: "{{ __dns_records }}"
+        zone_name: "{{ item.zone }}"
+        record_name: "{{ item.name }}"
+        record_type: "{{ item.type }}"
+        record_value: "{{ item.value | ansible.utils.ipaddr('address') }}"
+      loop: "{{ dns_records }}"

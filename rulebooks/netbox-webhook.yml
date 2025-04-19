@@ -8,25 +8,26 @@
 
   rules:
 
-  ## DNS
-    - name: Netbox | Create A and AAAA record
+  ## DNS Record
+    - name: E/netbox/dnsrecord
       condition: |
         event.payload.username != "ansible" and
         event.payload.model == "record"
       action:
         run_workflow_template:
-          name: "Netbox|DNS record"
+          name: "E/netbox/dnsrecord"
           organization: Default
           job_args:
             extra_vars:
               dns_records:
-                - dns_name: event.payload.data.name
-                  dns_zone: event.payload.data.zone.name
-                  dns_value: event.payload.data.value
-                  dns_type: event.payload.data.type
+                - name: event.payload.data.name
+                  zone: event.payload.data.zone.name
+                  value: event.payload.data.value
+                  type: event.payload.data.type
+                  _state: "{{ 'present' if event.payload.event == 'created' or event.payload.event == 'updated' else 'absent' }}"
 
   ## Virtual Machine created
-    - name: E/netbox/virtualmachine/create
+    - name: E/netbox/virtualmachine
       condition: |
         (
         event.payload.username != "ansible" and
@@ -38,7 +39,7 @@
         )
       action:
         run_workflow_template:
-          name: E/netbox/virtualmachine/create
+          name: E/netbox/virtualmachine
           organization: Default
           job_args:
             extra_vars:
