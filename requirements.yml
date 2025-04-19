@@ -3,3 +3,4 @@ collections:
     type: git
   - name: freeipa.ansible_freeipa
   - name: checkmk.general
+  - name: chaeynz.namecheap

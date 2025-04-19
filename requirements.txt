@@ -11,3 +11,4 @@ jmespath
 librouteros
 aiohttp
 ansible-pylibssh
+dnspython

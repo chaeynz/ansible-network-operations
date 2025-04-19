@@ -1,0 +1,40 @@
+---
+- name: Import Zones into NetBox
+  hosts: localhost
+  tasks:
+    - name: Define domains
+      ansible.builtin.set_fact:
+        nc_domains: "{{ lookup('chaeynz.namecheap.nc_lookup', method='domains.getList') | map(attribute='Name') }}"
+
+    - name: Get dig
+      loop: "{{ nc_domains }}"
+      ansible.builtin.set_fact:
+        domains: "{{  domains | default([]) | union([{'name': item, 'details': lookup('community.general.dig', item, qtype='SOA') | split(' ')}]) }}"
+
+    - debug: var=domains
+
+
+    - name: Add Zone to NetBox
+      loop: "{{ domains | rejectattr('name', 'in', lookup('netbox.netbox.nb_lookup', 'zones', plugin='netbox-dns', raw_data=true) | map(attribute='name')) }}"
+      loop_control:
+        label: "{{ item.name }}"
+      ansible.builtin.uri:
+        url: "{{ lookup('ansible.builtin.env', 'NETBOX_API', default=omit) }}/api/plugins/netbox-dns/zones/"
+        headers:
+          Authorization: "Token {{ lookup('ansible.builtin.env', 'NETBOX_TOKEN', default='') }}"
+        method: POST
+        body:
+          name: "{{ item.name }}"
+          status: active
+          soa_mname: {'name': "{{ item.details.0 | regex_replace('\\.$', '')}}" }
+          soa_rname: "{{ item.details.1 }}"
+          soa_refresh: "{{ item.details.3 }}"
+          soa_retry: "{{ item.details.4 }}"
+          soa_expire: "{{ item.details.5 }}"
+          soa_minimum: "{{ item.details.6 }}"
+          soa_ttl: 3600
+          soa_serial_auto: false
+        body_format: json
+        status_code:
+          - 200
+          - 201
