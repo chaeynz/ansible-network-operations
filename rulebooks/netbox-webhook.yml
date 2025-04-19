@@ -12,8 +12,7 @@
     - name: E/netbox/dnsrecord
       condition: |
         event.payload.username != "ansible" and
-        event.payload.model == "record" and
-        event.payload.data.type is in ['A', 'AAAA', 'A6', 'CNAME', 'DNAME', 'NS', 'PTR', 'TXT', 'SRV', 'MX', 'SSHFP']
+        event.payload.model == "record"
       action:
         run_workflow_template:
           name: "E/netbox/dnsrecord"
