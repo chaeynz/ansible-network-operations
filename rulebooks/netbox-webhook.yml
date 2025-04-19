@@ -28,10 +28,14 @@
   ## Virtual Machine created
     - name: E/netbox/virtualmachine/create
       condition: |
+        (
         event.payload.username != "ansible" and
         event.payload.model == "virtualmachine" and
-        event.payload.event == "created" and
-        event.payload.data.status.value == "planned" or event.payload.data.status.value == "active"
+        event.payload.event == "created"
+        ) and (
+        event.payload.data.status.value == "planned" or
+        event.payload.data.status.value == "active"
+        )
       action:
         run_workflow_template:
           name: E/netbox/virtualmachine/create
