@@ -25,7 +25,7 @@
                   zone: "{{ event.payload.data.zone.name }}"
                   value: "{{ event.payload.data.value }}"
                   type: "{{ event.payload.data.type }}"
-                  _state: "{{ 'present' if event.payload.event == 'created' or event.payload.event == 'updated' else 'absent' }}"
+              _state: "{{ 'present' if event.payload.event == 'created' or event.payload.event == 'updated' else 'absent' }}"
 
   ## Virtual Machine created
     - name: E/netbox/virtualmachine
