@@ -3,13 +3,19 @@
   hosts: localhost
   connection: local
   gather_facts: false
+  vars:
+    valid_types: ['A', 'AAAA', 'A6', 'CNAME', 'DNAME', 'NS', 'PTR', 'TXT', 'SRV', 'MX', 'SSHFP']
+
   tasks:
     - name: Ensure dns record is present
+      loop: "{{ dns_records }}"
+      loop_control:
+        label: "'{{ item.type }} Record '{{ item.name }}.{{ item.zone }}' -> '{{ item.value }}' | {{ item.state | default(_state) | default('present') }}"
+      when: item.type is in valid_types
       community.general.ipa_dnsrecord:
         validate_certs: false
-        state: "{{ _state | default('present') }}"
+        state: "{{ item.state | default(_state) | default('present') }}"
         zone_name: "{{ item.zone }}"
         record_name: "{{ item.name }}"
         record_type: "{{ item.type }}"
         record_value: "{{ item.value | ansible.utils.ipaddr('address') }}"
-      loop: "{{ dns_records }}"
