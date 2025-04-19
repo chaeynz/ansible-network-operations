@@ -11,7 +11,6 @@
   ## DNS Record
     - name: E/netbox/dnsrecord
       condition: |
-        event.payload.username != "ansible" and
         event.payload.model == "record"
       action:
         run_workflow_template:
