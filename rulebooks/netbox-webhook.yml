@@ -1,6 +1,7 @@
 ---
 - name: Listen for netbox events on a webhook
   hosts: all
+  execution_stragey: parallel
   sources:
     - ansible.eda.webhook:
         port: "{{ webhook_port | default(5000) }}"

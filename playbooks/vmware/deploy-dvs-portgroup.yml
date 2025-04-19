@@ -1,0 +1,11 @@
+---
+- name: vCenter DVS Portgroup
+  hosts: localhost
+  tasks:
+    - name: Create vlan portgroup
+      community.vmware.vmware_dvs_portgroup:
+        portgroup_name: "{{ portgroup_name }}"
+        switch_name: "{{ vswitch_name }}"
+        vlan_id: "{{ vlan_id }}"
+        port_binding: ephemeral
+        state: absent

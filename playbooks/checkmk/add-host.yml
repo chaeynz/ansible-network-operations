@@ -1,0 +1,17 @@
+---
+- name: Add Host to Checkmk
+  hosts: "{{ _hosts }}"
+  tasks:
+    - 
+    - name: "Create a host."
+      delegate_to: localhost
+      checkmk.general.host:
+        server_url: "{{ lookup('ansible.builtin.env', 'CHECKMK_HOST', default=omit) }}"
+        site: "{{ site | default('main') }}"
+        automation_user: "{{ lookup('ansible.builtin.env', 'CHECKMK_AUTOMATION_USER', default=omit) }}"
+        automation_secret: "{{ lookup('ansible.builtin.env', 'CHECKMK_AUTOMATION_PASS', default=omit) }}"
+        name: "{{ inventory_hostname }}"
+        folder: "/snmp"
+        state: "present"
+        attributes:
+          ipaddress: "{{ ansible_host }}"

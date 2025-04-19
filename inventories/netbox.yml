@@ -1,9 +1,7 @@
 ---
 plugin: netbox.netbox.nb_inventory
 validate_certs: true
-
 interfaces: true
-
 flatten_custom_fields: true
 flatten_config_context: true
 config_context: true

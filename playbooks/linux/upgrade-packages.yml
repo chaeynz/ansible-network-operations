@@ -1,8 +1,13 @@
 ---
 - name: Upgrade packages on hosts
   hosts: "{{ _hosts | mandatory }}"
-  gather_facts: true
+  strategy: free
   tasks:
+    - name: Gather facts subset
+      ansible.builtin.setup:
+        gather_subset:
+          - pkg_mgr
+
     - name: Upgrade all dnf packages
       become: true
       ansible.builtin.dnf:
@@ -11,11 +16,15 @@
       when: ansible_facts['pkg_mgr'] == 'dnf'
 
     - name: Update all apt packages
+      register: v
       become: true
       ansible.builtin.apt:
         name: "*"
         state: latest # noqa package-latest
       when: ansible_facts['pkg_mgr'] == 'apt'
+
+    - debug:
+        msg: "{{ v }}"
 
     - name: Update all pacman packages
       become: true

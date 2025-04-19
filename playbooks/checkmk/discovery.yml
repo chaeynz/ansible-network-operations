@@ -1,0 +1,27 @@
+---
+- name: Test discovery single host
+  hosts: localhost
+  tasks:
+    - name: Run discovery task
+      checkmk.general.discovery:
+        server_url: "{{ lookup('ansible.builtin.env', 'CHECKMK_HOST', default=omit) }}"
+        site: "{{ site | default('main') }}"
+        validate_certs: true
+        automation_user: "{{ lookup('ansible.builtin.env', 'CHECKMK_AUTOMATION_USER', default=omit) }}"
+        automation_secret: "{{ lookup('ansible.builtin.env', 'CHECKMK_AUTOMATION_PASS', default=omit) }}"
+        host_name: "{{ host }}"
+        state: "refresh"
+
+- name: Test discovery
+  hosts: linux
+  tasks:
+    - name: Run discovery task
+      delegate_to: localhost
+      checkmk.general.discovery:
+        server_url: "{{ lookup('ansible.builtin.env', 'CHECKMK_HOST', default=omit) }}"
+        site: "{{ site | default('main') }}"
+        validate_certs: true
+        automation_user: "{{ lookup('ansible.builtin.env', 'CHECKMK_AUTOMATION_USER', default=omit) }}"
+        automation_secret: "{{ lookup('ansible.builtin.env', 'CHECKMK_AUTOMATION_PASS', default=omit) }}"
+        host_name: "{{ inventory_hostname }}"
+        state: "refresh"

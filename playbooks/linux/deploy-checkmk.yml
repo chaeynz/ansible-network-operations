@@ -1,0 +1,51 @@
+---
+- name: Deploy CheckMK Agent on target
+  gather_facts: true
+  hosts: "{{ _hosts | mandatory }}"
+  strategy: free
+  vars:
+    checkmk_agent_version: "2.3.0p30"
+    checkmk_agent_edition: cre
+    checkmk_agent_server_protocol: https
+    checkmk_agent_server: "{{ lookup('ansible.builtin.env', 'CHECKMK_URL', default=omit) }}"
+    checkmk_agent_server_validate_certs: true
+    checkmk_agent_site: 'main'
+    checkmk_agent_user: "{{ lookup('ansible.builtin.env', 'CHECKMK_AUTOMATION_USER', default=omit) }}"
+    checkmk_agent_secret: "{{ lookup('ansible.builtin.env', 'CHECKMK_AUTOMATION_PASS', default=omit) }}"
+    checkmk_agent_auto_activate: true
+    checkmk_agent_force_foreign_changes: true
+    checkmk_agent_add_host: true
+    checkmk_agent_folder: '/virtual_machines'
+    checkmk_agent_host_ip: "{{ ansible_host }}"
+    checkmk_agent_configure_firewall: true
+    checkmk_agent_discover: false
+
+  tasks:
+    - name: Install Checkmk agent on host
+      ansible.builtin.include_role:
+
+        name: checkmk.general.agent
+
+- name: Run discovery
+  hosts: localhost
+  tasks:
+    - ansible.builtin.debug:
+        msg: "{{ groups[_hosts] }}"
+
+    - name: "Add newly discovered services on hosts. (Bulk)"
+      checkmk.general.discovery:
+        server_url: "https://{{ lookup('ansible.builtin.env', 'CHECKMK_URL', default=omit) }}"
+        site: "main"
+        automation_user: "{{ lookup('ansible.builtin.env', 'CHECKMK_AUTOMATION_USER', default=omit) }}"
+        automation_secret: "{{ lookup('ansible.builtin.env', 'CHECKMK_AUTOMATION_PASS', default=omit) }}"
+        hosts: "{{ groups[_hosts] }}"
+        state: "new"
+
+    - name: "Activate changes including foreign changes and wait for completion."
+      checkmk.general.activation:
+        server_url: "https://{{ lookup('ansible.builtin.env', 'CHECKMK_URL', default=omit) }}"
+        site: "main"
+        automation_user: "{{ lookup('ansible.builtin.env', 'CHECKMK_AUTOMATION_USER', default=omit) }}"
+        automation_secret: "{{ lookup('ansible.builtin.env', 'CHECKMK_AUTOMATION_PASS', default=omit) }}"
+        redirect: 'true'
+        force_foreign_changes: 'true'

@@ -10,13 +10,11 @@
         name: "{{ _name | mandatory }}"
         password: "{{ _password | default(omit) }}"
         update_password: "{{ _update_password | default('on_create') }}"
-        userauthtype:
-          - "password"
+        userauthtype: "{{ auth_type | default(omit) }}"
         krbpasswordexpiration: "{{ expires | default(omit) }}"
         givenname: "{{ _name }}"
         sn: "{{ surename | default('none') }}"
-        mail:
-          - "{{ _mail | default(None) }}"
+        mail: "{{ _mail | default(omit) }}"
         uidnumber: "{{ uidnumber | default(omit) }}"
         gidnumber: "{{ gidnumber | default(omit) }}"
-        homedirectory: "/home/{{ _name }}"
+        sshpubkey: "{{ ssh_public_keys }}"

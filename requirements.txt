@@ -8,3 +8,6 @@ pyvmomi==8.0.3.0.1
 netaddr
 xmltodict
 jmespath
+librouteros
+aiohttp
+ansible-pylibssh

@@ -1,0 +1,12 @@
+---
+- name: Manage Nginx
+  hosts: "{{ _hosts }}"
+  tasks:
+    - name: Retrieve renewal information for a certificate
+      community.crypto.acme_certificate_renewal_info:
+        certificate_path: /etc/httpd/ssl/sample.com.crt
+      register: cert_data
+
+    - name: Should the certificate be renewed?
+      ansible.builtin.debug:
+        var: cert_data.should_renew

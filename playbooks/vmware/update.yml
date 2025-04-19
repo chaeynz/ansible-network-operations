@@ -1,0 +1,14 @@
+---
+- name: Get updates
+  hosts: localhost
+  tasks:
+    - name: Get appliance updates
+      register: v
+      vmware.vmware_rest.appliance_update_info:
+
+    - debug: var=v
+
+    - name: Alert if update present
+      when: v.value.state == 'UPDATES_PENDING'
+      ansible.builtin.debug:
+        msg: "Appliance '{{ lookup('ansible.builtin.env', 'VMWARE_HOST') }}' can be updated to {{ v.value.version }}"
