@@ -1,0 +1,17 @@
+- name: Copy tunnel creds
+  run_once: true
+  become: true
+  ansible.builtin.copy:
+    dest: "/etc/cloudflared/{{ cf_tunnel }}.json"
+    src: "/etc/cloudflared/{{ cf_tunnel_id }}.json"
+    remote_src: true
+    owner: "{{ cf_user }}"
+    group: "{{ cf_user }}"
+    mode: '0600'
+
+- name: Cleanup old creds
+  run_once: true
+  become: true
+  ansible.builtin.file:
+    path: "/etc/cloudflared/{{ cf_tunnel_id }}.json"
+    state: absent

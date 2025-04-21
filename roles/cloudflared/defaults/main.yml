@@ -1,0 +1,4 @@
+state: present
+cf_credential_path: /etc/cloudflared/
+cf_user: cloudflared
+is_shared_filesystem: true

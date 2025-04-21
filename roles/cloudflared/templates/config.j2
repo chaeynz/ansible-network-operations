@@ -1,0 +1,10 @@
+tunnel: {{ cf_tunnel_id }}
+credentials-file: /etc/cloudflared/{{ cf_tunnel_id }}.json
+
+# ref: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/configure-tunnels/local-management/configuration-file/
+ingress:
+{% for server in servers %}
+  - hostname: {{ server }}
+    service: "http://127.0.0.1:80"
+{% endfor %}
+  - service: http_status:404

@@ -1,0 +1,17 @@
+[Unit]
+Description=cloudflared Tunnel: %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User={{ cf_user }}
+Group={{ cf_user }}
+TimeoutStartSec=0
+Type=notify
+ExecStart=/usr/bin/cloudflared --no-autoupdate --config /etc/cloudflared/%i.yml --credentials-file /etc/cloudflared/%i.json tunnel run %i
+KillMode=process
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

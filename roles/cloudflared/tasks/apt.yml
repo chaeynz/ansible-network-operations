@@ -1,0 +1,29 @@
+- name: APT | Ensure keyrings directory exists
+  tags: package
+  become: true
+  ansible.builtin.file:
+    state: directory
+    path: /usr/share/keyrings
+    mode: '0755'
+
+- name: APT | Get cloudflare repo key
+  tags: package
+  become: true
+  ansible.builtin.get_url:
+    url: https://pkg.cloudflare.com/cloudflare-main.gpg
+    dest: /usr/share/keyrings/cloudflare-main.gpg
+
+
+- name: APT | Ensure cloudflare repository is present
+  tags: package
+  become: true
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main"
+    state: present
+
+- name: APT | Ensure cloudflared package is present
+  tags: package
+  become: true
+  ansible.builtin.apt:
+    name: cloudflared
+    update_cache: true

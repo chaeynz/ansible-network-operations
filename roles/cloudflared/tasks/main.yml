@@ -1,0 +1,147 @@
+- name: Gather facts
+  tags: package
+  ansible.builtin.setup:
+    gather_subset:
+      - pkg_mgr
+      - distribution
+      - distribution_release
+
+- name: Ensure cloudflared repository and package is present
+  tags: package
+  ansible.builtin.include_tasks: "{{ item }}"
+  with_first_found:
+    - "{{ role_path }}/tasks/{{ ansible_pkg_mgr }}.yml"
+    - "{{ role_path }}/tasks/{{ ansible_distribution }}.yml"
+    - "{{ role_path }}/tasks/unsupported.yml"
+
+- name: Ensure cloudflared user is present
+  tags: user
+  become: true
+  ansible.builtin.user:
+    name: "{{ cf_user }}"
+    shell: /usr/sbin/nologin
+    create_home: false
+    system: true
+    uid: 987
+    state: "{{ state }}"
+
+- name: Ensure /etc/cloudflared is present
+  tags: always
+  run_once: "{{ is_shared_filesystem }}"
+  become: true
+  ansible.builtin.file:
+    state: directory
+    path: /etc/cloudflared
+    owner: "{{ cf_user }}"
+    group: "{{ cf_user }}"
+    mode: '0700'
+
+- name: Ensure cloudflared certificate is present
+  tags: auth
+  run_once: "{{ is_shared_filesystem }}"
+  become: true
+  ansible.builtin.copy:
+    src: "{{ lookup('ansible.builtin.env', 'CLOUDFLARE_CERT', default=omit) }}"
+    dest: "{{ cf_credential_path | ansible.builtin.dirname }}/{{ lookup('ansible.builtin.env', 'CLOUDFLARE_CERT') | ansible.builtin.basename }}"
+    owner: "{{ cf_user }}"
+    group: "{{ cf_user }}"
+    mode: '0600'
+  register: result
+  retries: 3
+  delay: 1
+  until: result.failed is false
+
+- name: Check if tunnel exists
+  tags: tunnel
+  run_once: "{{ is_shared_filesystem }}"
+  become: true
+  ansible.builtin.command: "sudo -u {{ cf_user }} cloudflared tunnel info {{ cf_tunnel }}"
+  register: tunnel_info
+  changed_when: false
+  failed_when: false
+
+- name: Ensure cloudflared tunnel is present
+  tags: tunnel
+  when: state == 'present'
+  run_once: "{{ is_shared_filesystem }}"
+  become: true
+  ansible.builtin.shell: |
+    if echo "{{ tunnel_info.stderr }}" | grep -q 'error parsing tunnel ID'; then
+      sudo -u {{ cf_user }} cloudflared tunnel create {{ cf_tunnel }}
+    else
+      echo $true
+    fi
+  register: tunnel_create
+  changed_when: "'Created tunnel' in tunnel_create.stdout"
+  notify: Rename tunnel creds
+
+- name: Ensure cloudflared tunnel is absent
+  tags: tunnel
+  when: state == 'absent'
+  run_once: "{{ is_shared_filesystem }}"
+  become: true
+  ansible.builtin.shell: |
+    if echo "{{ tunnel_info.stderr | default('') }}" | grep -vq 'error parsing tunnel ID'; then
+      sudo -u {{ cf_user }} cloudflared tunnel delete -f {{ cf_tunnel }}
+    else
+      echo "Tunnel already absent, skipping delete."
+    fi
+  register: tunnel_delete
+  changed_when: "'Tunnel already absent' not in tunnel_delete.stdout"
+
+- name: Get tunnel info
+  tags:
+    - tunnel
+    - dns
+  run_once: "{{ is_shared_filesystem }}"
+  become: true
+  ansible.builtin.command: "sudo -u {{ cf_user }} cloudflared tunnel info {{ cf_tunnel }}"
+  register: tunnel_info
+  changed_when: false
+  failed_when: false
+
+- name: Grab Tunnel ID
+  tags:
+    - tunnel
+    - dns
+  ansible.builtin.set_fact:
+    cf_tunnel_id: "{{ tunnel_info.stdout | regex_search('([\\da-f]{8}-[\\da-f]{4}-[\\da-f]{4}-[\\da-f]{4}-[\\da-f]{12})', '\\1') | first | default(omit) }}"
+
+- name: Print Tunnel ID
+  tags: tunnel
+  run_once: true
+  ansible.builtin.debug:
+    var: cf_tunnel_id
+
+- name: Template out config
+  tags: tunnel
+  become: true
+  run_once: "{{ is_shared_filesystem }}"
+  ansible.builtin.template:
+    src: config.j2
+    dest: "/etc/cloudflared/{{ cf_tunnel }}.yml"
+    owner: "{{ cf_user }}"
+    group: "{{ cf_user }}"
+    mode: '0600'
+  notify: Restart cloudflared
+
+- name: Manage state of Cloudflare DNS records
+  tags: dns
+  loop: "{{ servers }}"
+  run_once: true
+  delegate_to: localhost
+  community.general.cloudflare_dns:
+    proxied: true
+    zone: "{{ item.split('.')[1:] | join('.') }}"
+    record: "{{ item.split('.') | first }}"
+    type: CNAME
+    value: "{{ cf_tunnel_id }}.cfargotunnel.com"
+    state: "{{ state }}"
+
+- name: Ensure cloudflared systemd unit is present
+  tags: always
+  when: state == 'present'
+  become: true
+  ansible.builtin.template:
+    src: systemd.j2
+    dest: /etc/systemd/system/cloudflared@.service

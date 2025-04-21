@@ -1,0 +1,12 @@
+- name: Rename tunnel creds
+  ansible.builtin.include_tasks: "{{ role_path }}/handlers/move-creds.yml"
+
+- name: Restart cloudflared
+  loop: "{{ ansible_play_hosts }}"
+  delegate_to: "{{ item }}"
+  run_once: true
+  become: true
+  ansible.builtin.systemd:
+    name: "cloudflared@{{ cf_tunnel }}"
+    state: restarted
+    daemon_reload: true
