@@ -9,7 +9,9 @@
   when: ansible_pkg_mgr != 'pacman'
   become: true
   ansible.builtin.package:
-    name: nginx
+    name:
+      - nginx
+      - curl
     state: present
     update_cache: true
 
@@ -38,12 +40,12 @@
     dest: "/etc/nginx/snippets/{{ item }}"
     mode: '0644'
 
-- name: Manage the server file
+- name: Template out the vserver file
   tags: config
   run_once: true
   become: true
   ansible.builtin.template:
-    src: vserver.j2
+    src: "vserver-{{ vserver_proto | mandatory }}.j2"
     dest: "/etc/nginx/sites-available/{{ vserver }}"
     validate: >
       bash -c '
