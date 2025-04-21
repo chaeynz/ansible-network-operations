@@ -1,4 +1,7 @@
 - name: Reload nginx
+  loop: "{{ ansible_play_hosts }}"
+  delegate_to: "{{ item }}"
+  run_once: true
   become: true
   ansible.builtin.service:
     name: nginx
