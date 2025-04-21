@@ -1,0 +1,71 @@
+- name: Gather facts
+  tags: package
+  ansible.builtin.setup:
+    gather_subset:
+      - pkg_mgr
+
+- name: Ensure Nginx Package is present
+  tags: package
+  when: ansible_pkg_mgr != 'pacman'
+  become: true
+  ansible.builtin.package:
+    name: nginx
+    state: present
+    update_cache: true
+
+- name: Get list of files from role's files directory
+  tags: snippets
+  delegate_to: localhost
+  run_once: true
+  register: role_files
+  ansible.builtin.find:
+    paths: "{{ role_path }}/files/"
+    file_type: file
+
+- name: Define snippet file names
+  tags: snippets
+  run_once: true
+  ansible.builtin.set_fact:
+    files: "{{ role_files.files | map(attribute='path') | map('ansible.builtin.basename') }}"
+
+- name: Ensure snippets are present
+  tags: snippets
+  run_once: true
+  become: true
+  loop: "{{ files }}"
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/etc/nginx/snippets/{{ item }}"
+    mode: '0644'
+
+- name: Manage the server file
+  tags: config
+  run_once: true
+  become: true
+  ansible.builtin.template:
+    src: vserver.j2
+    dest: "/etc/nginx/sites-available/{{ vserver }}"
+    validate: >
+      bash -c '
+      echo "events { worker_connections 1024; } http { include %s; }" > /tmp/nginx.conf &&
+      nginx -T -c /tmp/nginx.conf;
+      ec=$?;
+      rm -f /tmp/nginx.conf;
+      exit $ec'
+    mode: '0644'
+  notify: Reload nginx
+
+- name: Link the file to sites-enabled
+  tags: config
+  run_once: true
+  become: true
+  ansible.builtin.file:
+    src: "/etc/nginx/sites-available/{{ vserver }}"
+    dest: "/etc/nginx/sites-enabled/{{ vserver }}"
+    state: link
+
+- name: Validate entire nginx config
+  tags: config
+  become: true
+  ansible.builtin.command: nginx -t
+  changed_when: false
