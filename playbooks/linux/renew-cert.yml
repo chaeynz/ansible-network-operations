@@ -1,0 +1,94 @@
+---
+- name: Ansible Playbook
+  hosts: "{{ _hosts | mandatory }}"
+  tasks:
+    - name: Get stats of the FS object
+      become: true
+      ansible.builtin.stat:
+        path: "{{ account_key_path }}"
+      register: key_file
+
+    - name: Ensure private key is present
+      become: true
+      community.crypto.openssl_privatekey:
+        path: "{{ account_key_path }}"
+      when: not key_file.stat.exists
+
+    - name: Set file path
+      set_fact:
+        dir_subpath: "{{ domain.split('.')[1:] | join('.') if domain.split('.')[0] == '*' else domain }}"
+
+    - name: Create CSR
+      become: true
+      community.crypto.openssl_csr:
+        path: "/etc/letsencrypt/live/{{ dir_subpath }}/request.csr"
+        common_name: "{{ domain }}"
+        privatekey_path: "/etc/letsencrypt/live/{{ dir_subpath }}/privkey.pem"
+
+    - name: Obtain wildcard certificate via DNS-01 (manual mode)
+      become: true
+      community.crypto.acme_certificate:
+        account_key_src: "{{ account_key_path }}"
+        csr: "/etc/letsencrypt/live/{{ dir_subpath }}/request.csr"
+        fullchain_dest: "/etc/letsencrypt/live/{{ dir_subpath }}/fullchain.pem"
+        chain_dest: "/etc/letsencrypt/live/{{ dir_subpath }}/chain.pem"
+        dest: "/etc/letsencrypt/live/{{ dir_subpath }}/cert.pem"
+        acme_directory: https://acme-v02.api.letsencrypt.org/directory
+        acme_version: 2
+        challenge: dns-01
+        terms_agreed: true
+        remaining_days: 7
+      register: acme_result
+
+    - name: Create a TXT record
+      when: acme_result is changed
+      delegate_to: localhost
+      community.general.cloudflare_dns:
+        zone: "{{ domain.split('.')[-2:] | join('.') }}"
+        record: "_acme-challenge.{{ dir_subpath.split('.') | difference(domain.split('.')[-2:]) | join('.') }}"
+        type: TXT
+        value: "\"{{ acme_result.challenge_data[domain]['dns-01'].resource_value }}\""
+        state: present
+      register: record
+
+    - name: Wait for DNS
+      when: acme_result is changed
+      delegate_to: localhost
+      community.dns.wait_for_txt:
+        records:
+          - name: "_acme-challenge.{{ dir_subpath }}"
+            values: "{{ acme_result.challenge_data[domain]['dns-01'].resource_value }}"
+            mode: equals
+        always_ask_default_resolver: false
+        timeout: 600
+
+    - name: Wait for 30 seconds
+      when: acme_result is changed
+      ansible.builtin.pause:
+        seconds: 30
+
+    - name: Obtain wildcard certificate via DNS-01 (manual mode)
+      when: acme_result is changed
+      become: true
+      community.crypto.acme_certificate:
+        account_key_src: "{{ account_key_path }}"
+        csr: "/etc/letsencrypt/live/{{ dir_subpath }}/request.csr"
+        fullchain_dest: "/etc/letsencrypt/live/{{ dir_subpath }}/fullchain.pem"
+        chain_dest: "/etc/letsencrypt/live/{{ dir_subpath }}/chain.pem"
+        dest: "/etc/letsencrypt/live/{{ dir_subpath }}/cert.pem"
+        acme_directory: https://acme-v02.api.letsencrypt.org/directory
+        acme_version: 2
+        challenge: dns-01
+        terms_agreed: true
+        data: "{{ acme_result }}"
+      register: acme_result2
+
+    - name: Delete current TXT record
+      delegate_to: localhost
+      when: acme_result is changed
+      community.general.cloudflare_dns:
+        zone: "{{ domain.split('.')[-2:] | join('.') }}"
+        record: "_acme-challenge.{{ dir_subpath.split('.') | difference(domain.split('.')[-2:]) | join('.') }}"
+        type: TXT
+        value: "\"{{ acme_result.challenge_data[domain]['dns-01'].resource_value }}\""
+        state: absent
