@@ -4,3 +4,4 @@ collections:
   - name: freeipa.ansible_freeipa
   - name: checkmk.general
   - name: chaeynz.namecheap
+  - name: community.crypto
