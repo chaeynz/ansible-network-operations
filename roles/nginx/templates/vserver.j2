@@ -1,0 +1,31 @@
+{% if vserver_proto == 'https' %}
+server {
+    set $vserver {{ vserver }};
+    include /etc/nginx/snippets/http-redirect.conf;
+}
+{% endif %}
+
+upstream backend_{{ vserver.replace('.', '_') }} {
+{% for server in backend_servers %}
+server {{ server.ip }}:{{ server.port }} max_fails=2 fail_timeout=4s{{ ' ' + server.state if 'state' in server and server.state != '' else '' }};
+{% endfor %}
+    keepalive 32;
+}
+
+server {
+{% if vserver_proto == 'https' %}
+    set $vserver {{ vserver }};
+    set $domain {{ vserver.split('.')[1:] | join('.') }};
+    include /etc/nginx/snippets/basic-ssl-opts.conf;
+{% elif vserver_proto == 'http' %}
+    listen          80;
+    server_name     {{ vserver }};
+{% endif %}
+
+    location / {
+        proxy_pass {{ backend_proto | mandatory }}://backend_{{ vserver.replace('.', '_') }}{{ backend_path | default('') }};
+{% if backend_proto == 'https' %}
+        include /etc/nginx/snippets/proxy-ssl-opts.conf;
+{% endif %}
+    }
+}
