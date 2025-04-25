@@ -7,7 +7,7 @@ server {
 
 upstream backend_{{ vserver.replace('.', '_') }} {
 {% for server in backend_servers %}
-server {{ server.ip }}:{{ server.port }} max_fails=2 fail_timeout=4s{{ ' ' + server.state if 'state' in server and server.state != '' else '' }};
+    server {{ server.ip }}:{{ server.port }} max_fails=2 fail_timeout=4s{{ ' ' + server.state if 'state' in server and server.state != '' else '' }};
 {% endfor %}
     keepalive 32;
 }
