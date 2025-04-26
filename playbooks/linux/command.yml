@@ -5,3 +5,8 @@
     - name: Run command
       ansible.builtin.command: "{{ command }}"
       changed_when: false
+      register: command_result
+
+    - name: Print result
+      ansible.builtin.debug:
+        var: command_result.stdout_lines
