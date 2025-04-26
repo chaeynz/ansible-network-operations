@@ -15,7 +15,7 @@
   delegate_to: localhost
   ansible.builtin.git:
     force: true
-    repo: "git@github.com:chaeynz/backups.git"
+    repo: "{{ repo_url | mandatory }}"
     dest: /tmp/git/backups
     key_file: "{{ lookup('ansible.builtin.env', 'SSH_KEY', default=omit) }}"
     accept_hostkey: true
