@@ -1,0 +1,7 @@
+---
+- name: Run command
+  hosts: localhost
+  tasks:
+    - name: Run command
+      ansible.builtin.command: "{{ command }}"
+      changed_when: false
