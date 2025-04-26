@@ -2,7 +2,5 @@
 - name: Ansible Playbook
   hosts: "{{ _hosts | mandatory }}"
   strategy: linear
-  vars:
-    ansible_password: "{{ lookup('ansible.builtin.env', 'ANSIBLE_SSH_PASSWORD', default=omit) }}"
   roles:
     - backup
