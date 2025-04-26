@@ -1,0 +1,9 @@
+- name: Get config from RouterOS device
+  community.routeros.command:
+    commands: /export
+  register: output
+  changed_when: false
+
+- name: Format config from std output
+  ansible.builtin.set_fact:
+    config: "{{ (output.stdout_lines | first)[1:] | join('\n') }}"
