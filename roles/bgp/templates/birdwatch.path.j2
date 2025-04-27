@@ -1,0 +1,9 @@
+[Unit]
+Description=Watch a PID file to control Anycast VIP
+
+[Path]
+PathChanged={{ pid_path }}
+Unit=birdnotify.service
+
+[Install]
+WantedBy=multi-user.target

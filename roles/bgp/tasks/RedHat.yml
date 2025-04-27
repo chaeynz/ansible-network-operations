@@ -1,0 +1,108 @@
+- name: Check if EPEL repo is already configured.
+  tags: package
+  ansible.builtin.stat:
+    path: "{{ epel_repofile_path }}"
+  register: epel_repofile_result
+
+- name: Import EPEL GPG key.
+  tags: package
+  become: true
+  ansible.builtin.rpm_key:
+    key: "{{ epel_repo_gpg_key_url }}"
+    state: present
+  register: result
+  until: result is succeeded
+  retries: 5
+  delay: 10
+  when: not epel_repofile_result.stat.exists
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: Install EPEL repo.
+  tags: package
+  become: true
+  ansible.builtin.yum:
+    name: "{{ epel_repo_url }}"
+    state: present
+  register: result
+  until: result is succeeded
+  retries: 5
+  delay: 10
+  when: not epel_repofile_result.stat.exists
+
+- name: Ensure bird package is present
+  tags: package
+  become: true
+  ansible.builtin.package:
+    name: bird
+
+- name: Permit bgp traffic
+  tags: firewall
+  become: true
+  ansible.posix.firewalld:
+    port: 179/tcp
+    permanent: true
+    immediate: true
+    state: enabled
+
+- name: Permit bfd traffic
+  tags: firewall
+  become: true
+  ansible.posix.firewalld:
+    port: 3784/udp
+    permanent: true
+    immediate: true
+    state: enabled
+
+- name: Ensure config file
+  become: true
+  ansible.builtin.template:
+    src: bird.j2
+    dest: /etc/bird.conf
+    validate: "bird -p -c %s"
+  notify: Reload bird
+
+- name: Ensure birdwatch service script exists
+  tags: pid
+  become: true
+  ansible.builtin.template:
+    src: birdwatch.service_script.j2
+    dest: "{{ birdwatch_script_path }}"
+    validate: bash -n %s
+    mode: '0755'
+
+- name: Ensure oneshot birdnotify systemd unit exists
+  tags: pid
+  become: true
+  ansible.builtin.template:
+    src: birdnotify.service.j2
+    dest: /etc/systemd/system/birdnotify.service
+    validate: systemd-analyze verify %s
+    mode: '0755'
+  notify: Restart birdnotify.service
+
+- name: Ensure birdwatch systemd units for PIDs exist
+  tags: pid
+  loop: "{{ vips }}"
+  become: true
+  ansible.builtin.template:
+    src: birdwatch.path.j2
+    dest: "/etc/systemd/system/birdwatch-vip_{{ item.ip.replace('.', '_') }}.path"
+    validate: systemd-analyze verify %s
+    mode: '0755'
+  vars:
+    pid_path: "{{ item.attached_pid_path }}"
+
+- name: Ensure birdwatch systemd units for PIDs are running
+  tags: pid
+  loop: "{{ vips }}"
+  become: true
+  ansible.builtin.systemd:
+    name: "birdwatch-vip_{{ item.ip.replace('.', '_') }}.path"
+    state: started
+    enabled: true
+
+- name: Ensure bird is flying
+  become: true
+  ansible.builtin.systemd:
+    name: bird
+    state: started

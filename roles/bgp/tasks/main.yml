@@ -1,0 +1,11 @@
+- name: Gather facts
+  when: ansible_network_os is not defined
+  ansible.builtin.setup:
+    gather_subset: distribution
+
+- name: Ensure BGP
+  ansible.builtin.include_tasks: "{{ item }}"
+  with_first_found:
+    - "{{ role_path }}/tasks/{{ ansible_network_os | default(omit) | lower | split('.') | last }}.yml"
+    - "{{ role_path }}/tasks/{{ ansible_distribution }}.yml"
+    - "{{ role_path }}/tasks/unsupported.yml"

@@ -1,0 +1,46 @@
+log syslog all;
+
+router id {{ ansible_host }};
+
+# --- Virtual IPs --- #
+{% for vip in vips %}
+protocol static VIP_{{ vip.ip | replace('.', '_') }} {
+  ipv4;
+  route {{ vip.ip }}/32 via "{{ vip.if }}";
+}
+{% endfor %}
+
+# --- BFD Config --- #
+{% if autonomous_systems | map(attribute='bfd') is any %}
+protocol bfd {
+    interface "*" {
+    };
+}
+{% endif %}
+
+protocol device {
+}
+
+# --- BGP Autonomous Systems --- #
+{% for as in autonomous_systems %}
+protocol bgp AS{{ as.asn }} {
+    local as {{ as.asn }};
+
+    # --- Neighbors --- #
+{% for neighbor in as.neighbors %}
+    neighbor {{ neighbor.address }} as {{ neighbor.asn }};
+{% endfor %}
+
+    bfd {{ 'yes' if as.bfd is true else 'no' }};
+
+    ipv4 {
+        import all;
+        export all;
+    };
+    ipv6 {
+        import none;
+        export none;
+    };
+}
+
+{% endfor %}

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+{% for vip in vips %}
+if [ -f {{ vip.attached_pid_path }} ]; then
+    birdc enable "VIP_{{ vip.ip.replace('.', '_') }}"
+else
+    birdc disable "VIP_{{ vip.ip.replace('.', '_') }}"
+fi
+{% endfor %}
