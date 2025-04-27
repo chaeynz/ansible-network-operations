@@ -1,0 +1,5 @@
+---
+- name: Ansible Playbook
+  hosts: "{{ _hosts | mandatory }}"
+  roles:
+    - "{{ role | mandatory }}"

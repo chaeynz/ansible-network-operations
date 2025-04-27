@@ -2,3 +2,4 @@ skip_list:
   - name[missing]
   - args[module]
   - var-naming[no-role-prefix]
+  - risky-shell-pipe

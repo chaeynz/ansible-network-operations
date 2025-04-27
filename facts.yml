@@ -1,0 +1,10 @@
+---
+- name: Ansible Playbook
+  hosts: localhost
+  gather_facts: true
+  tasks:
+    - debug:
+        msg: "{{ hostvars['localhost'] | dict2items | selectattr('key', 'search', '^ansible_') | map(attribute='key') }}"
+
+    - debug:
+        msg: "{{ ansible_interfaces }}"
