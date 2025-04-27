@@ -45,6 +45,8 @@
   failed_when: false
   throttle: 1
 
+- debug: var=result
+
 - name: Push to git
   delegate_to: localhost
   run_once: true
@@ -53,3 +55,4 @@
     GIT_SSH_COMMAND="ssh -i {{ lookup('ansible.builtin.env', 'SSH_KEY', default=omit) }}" /usr/bin/git push -u origin main
   register: result
   changed_when: "'Everything up-to-date' not in result.stderr"
+- debug: var=result
