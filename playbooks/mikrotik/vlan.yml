@@ -1,117 +1,115 @@
 ---
 - name: Deploy VLANs from Netbox to MikroTik
-  hosts: routeros:&access_switch
-  strategy: free
+  hosts: "{{ _hosts | mandatory }}"
   vars:
-    credentials: &credentials
+    auth: &auth
       hostname: "{{ ansible_host }}"
-      username: "{{ lookup('ansible.builtin.env', 'ANSIBLE_USER') }}"
-      password: "{{ lookup('ansible.builtin.env', 'ANSIBLE_PASSWORD') }}"
-
+      username: "{{ lookup('ansible.builtin.env', 'ANSIBLE_USER', default=omit) }}"
+      password: "{{ lookup('ansible.builtin.env', 'ANSIBLE_PASSWORD', default=omit) }}"
   tasks:
-    - name: Ensure that bridge exists
+    - name: Get interfaces
+      ansible.builtin.set_fact:
+        interfaces: "{{ interfaces }}"
+        bridges: "{{ bridges }}"
+        physical_interfaces: "{{ interfaces | rejectattr('type.value', 'in', ['virtual', 'other', 'bridge']) | rejectattr('lag', '!=', none) }}"
+        svis: "{{ interfaces | selectattr('parent', '!=', none) | selectattr('parent.name', 'in', bridges | map(attribute='name')) }}"
+      vars:
+        interfaces: "{{ lookup('netbox.netbox.nb_lookup', 'interfaces', api_filter='device=' ~inventory_hostname, raw_data=true) }}"
+        bridges: "{{ interfaces | selectattr('type.value', 'eq', 'bridge') }}"
+
+    - name: Ensure bridge exists
       delegate_to: localhost
       community.routeros.api_modify:
-        <<: *credentials
+        <<: *auth
         path: interface bridge
-        handle_absent_entries: remove
-        handle_entries_content: remove_as_much_as_possible
-        ensure_order: true
         data: >-
           {%- set result = [] -%}
-          {%- for interface in interfaces | selectattr('type.value', 'eq', 'bridge') -%}
+          {%- for item in bridges -%}
             {%- set _ = result.append(
               {
-                'name': interface.name,
-                'mtu': interface.mtu or 9000,
+                'name': item.name,
+                'mtu': item.mtu or 1500,
                 'vlan-filtering': true,
-                'dhcp-snooping': true
               }
             ) -%}
           {%- endfor -%}
           {{ result }}
+        handle_absent_entries: remove
+        handle_entries_content: ignore
+        ensure_order: true
 
-    - name: Add ports to bridge
+    - name: Ensure bridge ports exist
       delegate_to: localhost
       community.routeros.api_modify:
-        <<: *credentials
+        <<: *auth
         path: interface bridge port
-        handle_absent_entries: remove
-        handle_entries_content: remove_as_much_as_possible
-        ensure_order: true
         data: >-
           {%- set result = [] -%}
-          {%- for bridge_if in interfaces | selectattr('type.value', 'eq', 'bridge') -%}
-            {%- set bridge_ports = interfaces
-              | selectattr('bridge', '!=', none)
-              | list
-              | selectattr('bridge.name', 'eq', bridge_if.name)
-              | list
-              | community.general.json_query('[].name')
-            -%}
+          {%- for item in physical_interfaces -%}
             {%- set _ = result.append(
               {
-                'interface': bridge_ports | join(','),
-                'bridge': bridge_if.name
+                'interface': item.name,
+                'bridge': item.bridge.name,
+                'pvid': item.untagged_vlan.vid | default(omit),
               }
             ) -%}
           {%- endfor -%}
           {{ result }}
+        handle_absent_entries: remove
+        handle_entries_content: remove_as_much_as_possible
+        ensure_order: true
 
-
-    - name: Create VLAN
+    - name: Ensure VLANs on bridge exist
       delegate_to: localhost
       community.routeros.api_modify:
-        <<: *credentials
+        <<: *auth
         path: interface bridge vlan
-        handle_absent_entries: remove
-        handle_entries_content: remove_as_much_as_possible
-        ensure_order: true
         data: >-
           {%- set result = [] -%}
-          {%- for vlan in interfaces | community.general.json_query('[].tagged_vlans[].vid') | list | union(interfaces | community.general.json_query('[].untagged_vlan[].vid')) | unique -%}
-            {%- for bridge in interfaces | selectattr('type.value', 'eq', 'bridge') -%}
-              {%- set tagged_interfaces = interfaces
-                | selectattr('type.value', '!=', 'virtual')
-                | selectattr('tagged_vlans', '!=', none)
-                | selectattr('tagged_vlans', 'search', 'vid.: ' + vlan | string )
-                | community.general.json_query('[].name')
-              -%}
-              {%- set untagged_interfaces = interfaces
-                | selectattr('type.value', '!=', 'virtual')
-                | selectattr('untagged_vlan', '!=', none)
-                | selectattr('untagged_vlan.vid', 'eq', vlan | int)
-                | community.general.json_query('[].name')
-              -%}
-              {%- set _ = result.append(
-                {
-                  'bridge': bridge.name,
-                  'vlan-ids': vlan,
-                  'tagged': tagged_interfaces | join(','),
-                  'untagged': untagged_interfaces | join(',')
-                }
-              ) -%}
-            {%- endfor -%}
-          {%- endfor -%}
-          {{ result }}
-
-    - name: Create SVIs
-      community.routeros.api_modify:
-        <<: *credentials
-        path: interface vlan
-        handle_absent_entries: remove
-        handle_entries_content: remove_as_much_as_possible
-        ensure_order: true
-        data: >-
-          {%- set result = [] -%}
-          {%- for interface in interfaces | selectattr('type.value', 'eq', 'virtual') | selectattr('untagged_vlan', '!=', none) -%}
+          {%- for vlan in interfaces | json_query('[][untagged_vlan.vid,tagged_vlans[].vid][][]') | unique -%}
             {%- set _ = result.append(
               {
-                'name': interface.name,
-                'vlan-id': interface.untagged_vlan.vid,
-                'interface': interface.parent.name,
-                'mtu': interface.mtu or 1500
+                'bridge': physical_interfaces | map(attribute='bridge.name') | first,
+                'vlan-ids': vlan,
+                'tagged': (physical_interfaces | selectattr('mode', '!=', none) | selectattr('mode.value', 'eq', 'tagged-all') | map(attribute='name') + physical_interfaces | json_query('[?tagged_vlans[?vid == `' ~vlan ~'`]]') | map(attribute='name')) | join(','),
+                'untagged': physical_interfaces | selectattr('untagged_vlan', '!=', none) | selectattr('untagged_vlan.vid', 'eq', vlan) | map(attribute='name') | join(','),
               }
             ) -%}
           {%- endfor -%}
           {{ result }}
+        handle_absent_entries: remove
+        handle_entries_content: remove_as_much_as_possible
+        ensure_order: false
+
+    - name: Ensure SVIs exist
+      delegate_to: localhost
+      when: svis | map(attribute='untagged_vlan') is all
+      register: svi_task
+      community.routeros.api_modify:
+        <<: *auth
+        path: interface vlan
+        data: >-
+          {%- set result = [] -%}
+          {%- for svi in svis -%}
+            {%- set _ = result.append(
+              {
+                'name': svi.name,
+                'interface': svi.parent.name,
+                'vlan-id': svi.untagged_vlan.vid,
+                'mtu': svi.mtu or 1500,
+              }
+            ) -%}
+          {%- endfor -%}
+          {{ result }}
+        handle_absent_entries: remove
+        handle_entries_content: ignore
+        handle_read_only: ignore
+        ensure_order: false
+
+    - name: Log information about the skipped SVI task
+      when: svi_task.skipped | default(false)
+      ansible.builtin.debug:
+        msg: {
+            'svi_task': "{{ svi_task }}",
+            'svis': "{{ svis }}"
+          }
