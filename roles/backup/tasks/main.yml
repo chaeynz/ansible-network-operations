@@ -38,6 +38,8 @@
   delegate_to: localhost
   ansible.builtin.shell: >
     cd /tmp/git/backups &&
+    git config --global user.name {{ git_user }} &&
+    git config --global user.email {{ git_email }} &&
     /usr/bin/git add * &&
     /usr/bin/git commit -m "{{ inventory_hostname }} | Automated configuration backup"
   register: result
@@ -52,6 +54,7 @@
   run_once: true
   ansible.builtin.shell: >
     cd /tmp/git/backups &&
+
     GIT_SSH_COMMAND="ssh -i {{ lookup('ansible.builtin.env', 'SSH_KEY', default=omit) }}" /usr/bin/git push -u origin main
   register: result
   changed_when: "'Everything up-to-date' not in result.stderr"
