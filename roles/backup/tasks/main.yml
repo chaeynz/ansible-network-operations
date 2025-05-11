@@ -41,7 +41,7 @@
     git config --global user.name {{ git_user }} &&
     git config --global user.email {{ git_email }} &&
     /usr/bin/git add * &&
-    /usr/bin/git commit -m "{{ inventory_hostname }} | Automated configuration backup"
+    /usr/bin/git commit -m "Automated configuration backup"
   register: result
   changed_when: "'nothing to commit' not in result.stdout"
   failed_when: false
