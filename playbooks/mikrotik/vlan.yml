@@ -11,7 +11,7 @@
       ansible.builtin.set_fact:
         interfaces: "{{ interfaces }}"
         bridges: "{{ bridges }}"
-        physical_interfaces: "{{ interfaces | rejectattr('type.value', 'in', ['virtual', 'other', 'bridge']) | rejectattr('lag', '!=', none) }}"
+        physical_interfaces: "{{ interfaces | rejectattr('type.value', 'in', ['virtual', 'other', 'bridge']) | rejectattr('lag', '!=', none) | rejectattr('bridge', '==', none) }}"
         svis: "{{ interfaces | selectattr('parent', '!=', none) | selectattr('parent.name', 'in', bridges | map(attribute='name')) }}"
       vars:
         interfaces: "{{ lookup('netbox.netbox.nb_lookup', 'interfaces', api_filter='device=' ~inventory_hostname, raw_data=true) }}"
@@ -50,6 +50,7 @@
               {
                 'interface': item.name,
                 'bridge': item.bridge.name,
+                'frame-types': 'admit-only-vlan-tagged' if item.untagged_vlan == none else omit,
                 'pvid': item.untagged_vlan.vid | default(omit),
               }
             ) -%}
