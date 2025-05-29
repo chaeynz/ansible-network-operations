@@ -30,8 +30,7 @@
       condition: |
         (
         event.payload.username != "ansible" and
-        event.payload.model == "virtualmachine" and
-        event.payload.event == "created"
+        event.payload.model == "virtualmachine"
         ) and (
         event.payload.data.status.value == "planned" or
         event.payload.data.status.value == "active"
