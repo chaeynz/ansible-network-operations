@@ -41,7 +41,7 @@
           organization: Default
           job_args:
             extra_vars:
-              _hosts: "{{ event.payload.data.name }}"
+              vm_name: "{{ event.payload.data.name }}"
               platform: "{{ event.payload.data.platform.name }}"
               cluster: "{{ event.payload.data.cluster.name }}"
               tenant: "{{ event.payload.data.tenant.name }}"
