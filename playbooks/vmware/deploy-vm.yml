@@ -1,76 +1,57 @@
 ---
 - name: Deploy a virtual machine in vCenter
-  hosts: localhost
+  hosts: "{{ _hosts }}"
   vars:
     credentials: &credentials
       netbox_url: "{{ lookup('ansible.builtin.env', 'NETBOX_API', default=omit) }}"
       netbox_token: "{{ lookup('ansible.builtin.env', 'NETBOX_TOKEN', default=omit) }}"
   tasks:
-    ## FIXME: Handle None value from template_name in if statement
+    - name: Find Guest by name
+      delegate_to: localhost
+      community.vmware.vmware_guest_find:
+        name: "{{ inventory_hostname }}"
+      delegate_to: localhost
+      register: vm_find
+      ignore_errors: true
+
+    - debug: var=vm_find
+
+    - name: End play if it exists
+      when: vm_find.failed | default(false) is false
+      ansible.builtin.meta: end_play
+
+    - name: Fail play if multiple VMs with that name exist
+      when: vm_find.folders | default([]) | length >= 2
+      ansible.builtin.fail:
+        msg:
+          - "There are multiple virtual machines with that name, can not operate."
+          - "{{ vm_find.folders }}"
+
     - name: Set vm_template from platform
-      when: platform is defined
+      when: vm_template is not defined
       ansible.builtin.set_fact:
         vm_template: "{{ lookup('netbox.netbox.nb_lookup', 'platforms', api_filter='name=\"' ~platform ~'\"', raw_data=true).custom_fields.vm_template }}"
-
-    - name: Set from template_name
-      when: platform is not defined and template_name is not none
-      ansible.builtin.set_fact:
-        vm_template: "{{ template_name }}"
-
-    - debug: var=vm_template
-
-    - name: Get Tenant domain
-      when: domain is not defined and tenant is defined
-      ansible.builtin.set_fact:
-        domain: "{{ lookup('netbox.netbox.nb_lookup', 'tenants', api_filter='name=' ~tenant, raw_data=true).custom_fields.dns_zone.name }}"
 
     - name: Set VM folder
       when: vm_folder is not defined
       ansible.builtin.set_fact:
-        vm_folder: "{{ domain | community.dns.get_registrable_domain }}/{{ subfolder }}"
-
-    - name: Get DNS servers from NetBox
-      loop: >-
-        {{
-          lookup('netbox.netbox.nb_lookup', 'zones',
-            plugin='netbox-dns',
-            api_filter='name=' ~ domain,
-            raw_data=true
-          ).nameservers | map(attribute='name')
-        }}
-      ansible.builtin.set_fact:
-        dns_servers: >-
-          {{
-            (dns_servers | default([])) + [
-              lookup('netbox.netbox.nb_lookup', 'records',
-                plugin='netbox-dns',
-                api_filter='name=' ~ item.split('.')[:1] | join('.') ~
-                            ' zone=' ~ item.split('.')[1:] | join('.') ~
-                            ' type=A',
-                raw_data=true
-              ).value | default(false)
-            ]
-            | reject('equalto', false) | list
-          }}
-
-    - debug: var=dns_servers
+        vm_folder: "{{ tenant }}/{{ subfolder | default('') }}"
 
     - name: Get Netbox prefix details
       ansible.builtin.set_fact:
         nb_prefix: "{{ lookup('netbox.netbox.nb_lookup', 'prefixes', api_filter='prefix=' ~prefix, raw_data=true) }}"
 
-    - debug: var=nb_prefix
-
-    - name: Ensure VM is in netbox and set status to staged
+    - name: Ensure VM is in netbox
+      when: event.payload is not defined
+      delegate_to: localhost
       netbox.netbox.netbox_virtual_machine:
         <<: *credentials
         data:
-          name: "{{ vm_name }}"
+          name: "{{ inventory_hostname }}"
           cluster: "{{ cluster }}"
           tenant: "{{ tenant | default(omit) or omit }}"
           vcpus: "{{ vcpus | default(omit) or omit }}"
           memory: "{{ memory | default(omit) or omit }}"
-          status: staged
           custom_fields:
             vm_prefix:
               id: "{{ nb_prefix.id }}"
@@ -78,16 +59,16 @@
 
     - name: Add interface to vm in NetBox
       register: nb_interface
+      delegate_to: localhost
       netbox.netbox.netbox_vm_interface:
         <<: *credentials
         data:
           name: "eth0"
-          virtual_machine: "{{ vm_name }}"
+          virtual_machine: "{{ inventory_hostname }}"
         state: present
 
-    - debug: var=nb_interface
-
     - name: Get IP address from NetBox
+      delegate_to: localhost
       when: ip_address is not defined
       register: nb_ip_address
       netbox.netbox.netbox_ip_address:
@@ -96,19 +77,21 @@
           prefix: "{{ prefix }}"
           assigned_object:
             name: "eth0"
-            virtual_machine: "{{ vm_name }}"
+            virtual_machine: "{{ inventory_hostname }}"
         state: present
 
     - name: Set ip address
       when: ip_address is not defined
+      delegate_to: localhost
       ansible.builtin.set_fact:
-        ip_address: "{{ nb_ip_address.ip_address.address if ip_address is not defined }}"
+        ip_address: "{{ nb_ip_address.ip_address.address }}"
 
     - name: Set primary IP for vm
+      delegate_to: localhost
       netbox.netbox.netbox_virtual_machine:
         <<: *credentials
         data:
-          name: "{{ vm_name }}"
+          name: "{{ inventory_hostname }}"
           cluster: "{{ cluster }}"
           primary_ip4: "{{ ip_address }}"
 
@@ -121,6 +104,7 @@
     - name: Get DVS portgroup
       when: nb_prefix.vlan is not none
       register: dvs_portgroups
+      delegate_to: localhost
       community.vmware.vmware_dvs_portgroup_find:
         vlanid: "{{ nb_prefix.vlan.vid }}"
 
@@ -140,11 +124,12 @@
         msg: "{{ ip_address | ansible.utils.ipaddr('address') }}"
 
     - name: Clone from template and configure customization
+      delegate_to: localhost
       community.vmware.vmware_guest:
         template: "{{ vm_template }}"
         linked_clone: false
         folder: "{{ vm_folder }}"
-        name: "{{ vm_name }}"
+        name: "{{ inventory_hostname }}"
         cluster: "{{ cluster }}"
         datacenter: "{{ datacenter }}"
         hardware:
@@ -162,15 +147,6 @@
             gateway: "{{ prefix | ansible.utils.ipaddr('last_usable') }}"
         customization:
           dns_servers: "{{ dns_servers | default(omit) }}"
-          domain: "{{ domain }}"
-          hostname: "{{ vm_name }}"
+          hostname: "{{ inventory_hostname }}"
         wait_for_customization: true
         wait_for_ip_address: true
-
-    - name: Set VM status active in NetBox
-      netbox.netbox.netbox_virtual_machine:
-        <<: *credentials
-        data:
-          name: "{{ vm_name }}"
-          cluster: "{{ cluster }}"
-          status: active

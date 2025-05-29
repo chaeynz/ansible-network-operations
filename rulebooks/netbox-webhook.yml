@@ -42,15 +42,29 @@
           organization: Default
           job_args:
             extra_vars:
-              vm_name: "{{ event.payload.data.name }}"
+              _hosts: "{{ event.payload.data.name }}"
+              platform: "{{ event.payload.data.platform.name }}"
               cluster: "{{ event.payload.data.cluster.name }}"
-              template_name: "{{ event.payload.data.custom_fields.vm_template | default('') }}"
               tenant: "{{ event.payload.data.tenant.name }}"
+              subfolder: "{{ event.payload.data.custom_fields.machine_service_category }}"
               prefix: "{{ event.payload.data.custom_fields.vm_prefix.prefix }}"
               vcpus: "{{ event.payload.data.vcpus }}"
               memory: "{{ event.payload.data.memory }}"
-              subfolder: "{{ event.payload.data.custom_fields.machine_service_category }}"
-              platform: "{{ event.payload.data.platform.name }}"
+
+  ## Prefix
+    - name: E/netbox/prefix
+      condition: |
+        (
+        event.payload.username != "ansible" and
+        event.payload.model == "prefix" and
+        event.payload.event == "created"
+        ) and (
+        event.payload.data.status.value == "planned" or
+        event.payload.data.status.value == "active"
+        )
+      action:
+        run_workflow_template:
+          name: E/netbox/virtualmachine
 
   ## Catch all other events and log them
     - name: Debug
