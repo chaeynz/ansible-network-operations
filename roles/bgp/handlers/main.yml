@@ -2,6 +2,7 @@
   become: true
   ansible.builtin.systemd:
     name: bird
+    enabled: true
     state: reloaded
 
 - name: Restart birdnotify.service
@@ -9,4 +10,5 @@
   ansible.builtin.systemd:
     name: birdnotify.service
     state: restarted
+    enabled: true
     daemon_reload: true
