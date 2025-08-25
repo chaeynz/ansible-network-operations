@@ -1,0 +1,5 @@
+- name: Ensure bird package is present
+  tags: package
+  become: true
+  ansible.builtin.package:
+    name: bird2
